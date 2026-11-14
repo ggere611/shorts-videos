@@ -1,8 +1,14 @@
-import subprocess, math, sys, wave
+import subprocess, math, sys, wave, os
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 
 W, H, FPS = 1080, 1920, 30
+try:
+    sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+    from nichos import paste_mascota
+    MASCOTA = os.environ.get("MASCOTA", "monstruo")
+except Exception:
+    paste_mascota = None
 TABLE = int(sys.argv[1]) if len(sys.argv) > 1 else 2
 OUT = sys.argv[2] if len(sys.argv) > 2 else f"tabla_{TABLE}.mp4"
 BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
@@ -45,6 +51,7 @@ def frame(fi):
         text_c(d, (W/2, 760), "¡TABLA", 190, (255, 255, 255), scale=s * wob)
         text_c(d, (W/2, 980), f"DEL {TABLE}!", 230, (229, 57, 53), (255, 255, 255), 14, scale=ease_back((t - 0.3) / 0.6) * wob)
         text_c(d, (W/2, 1300), "¡Aprendé jugando!", 80, (40, 40, 60), (255, 255, 255), 6, scale=ease_back((t - 0.9) / 0.5))
+        if paste_mascota: paste_mascota(im, W/2, 1620, 480 * max(0.01, ease_back((t - 0.4) / 0.5)), t, talk=True, char=MASCOTA)
         return im
     t2 = t - T_INTRO
     if t2 < 10 * T_EQ:
@@ -109,6 +116,7 @@ def frame(fi):
         bw, bh = 560 * s, 150 * s
         d.rounded_rectangle([W/2 - bw/2, 1400 - bh/2, W/2 + bw/2, 1400 + bh/2], int(40 * s), fill=(229, 57, 53), outline=(255, 255, 255), width=8)
         text_c(d, (W/2, 1400), "SUSCRIBIRME", 72, (255, 255, 255), (229, 57, 53), 2, scale=s)
+    if paste_mascota: paste_mascota(im, W/2, 1680, 420, t, mood="festejando", char=MASCOTA, jump=True)
     return im
 
 def audio(path):

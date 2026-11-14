@@ -358,6 +358,79 @@ def pipo_beats():
         pops += [st + 0.05, st + 0.45]; ticks += [st + 2.8, st + 3.4, st + 4.0]; chimes.append(st + 4.6)
     return pops, chimes, ticks
 
+# ---------------- VOCABULARIO BILINGÜE CON MASCOTA ----------------
+VOCAB = {
+    "animales_en": dict(host="rana", t1="¡Animales", t2="en inglés!", intro_em="🐾", items=[
+        ("🐶", "PERRO", "DOG", (255, 202, 40)), ("🐱", "GATO", "CAT", (129, 212, 250)),
+        ("🐮", "VACA", "COW", (165, 214, 167)), ("🐷", "CHANCHO", "PIG", (244, 143, 177)),
+        ("🐴", "CABALLO", "HORSE", (255, 171, 145)), ("🐔", "GALLINA", "CHICKEN", (206, 147, 216))]),
+    "deportes_en": dict(host="toro", t1="¡Deportes", t2="en inglés!", intro_em="🏆", items=[
+        ("⚽", "FÚTBOL", "SOCCER", (102, 187, 106)), ("🏀", "BÁSQUET", "BASKETBALL", (255, 167, 38)),
+        ("🎾", "TENIS", "TENNIS", (129, 212, 250)), ("🏊", "NATACIÓN", "SWIMMING", (79, 195, 247)),
+        ("🚴", "CICLISMO", "CYCLING", (255, 213, 79)), ("🏐", "VÓLEY", "VOLLEYBALL", (206, 147, 216))]),
+    "colores2": dict(host="gato", t1="¡Más colores", t2="en inglés!", intro_em="🎨", items=[
+        ("🌸🦩🎀", "ROSA", "PINK", (244, 143, 177)), ("☁️🐑🥛", "BLANCO", "WHITE", (176, 190, 197)),
+        ("🐻🍫🥔", "MARRÓN", "BROWN", (161, 110, 72)), ("🐘🐭🪨", "GRIS", "GRAY", (144, 164, 174)),
+        ("🎱🎩🕷️", "NEGRO", "BLACK", (66, 66, 80)), ("🌊🐬💎", "CELESTE", "LIGHT BLUE", (94, 200, 242))]),
+}
+V_INTRO, V_EACH, V_END = 2.8, 4.2, 3.2
+VSET = VOCAB["animales_en"]
+
+def vocab_frame(t):
+    im = Image.new("RGB", (W, H)); d = ImageDraw.Draw(im)
+    host, items = VSET["host"], VSET["items"]
+    if t < V_INTRO:
+        bg(d, (255, 214, 102), t)
+        text_c(d, (W/2, 420), VSET["t1"], 150 if len(VSET["t1"]) <= 10 else 125, (255, 255, 255), scale=ease_back(t / 0.4))
+        text_c(d, (W/2, 590), VSET["t2"], 140, (229, 57, 53), (255, 255, 255), 12, scale=ease_back((t - 0.25) / 0.4))
+        paste_emoji(im, VSET["intro_em"], W/2, 820, 200, ease_back((t - 0.6) / 0.4))
+        paste_mascota(im, W/2, 1350, 700 * max(0.01, ease_back((t - 0.2) / 0.5)), t, talk=True, char=host)
+        return im
+    t2 = t - V_INTRO
+    if t2 < len(items) * V_EACH:
+        k = int(t2 // V_EACH); lt = t2 - k * V_EACH
+        ems, es, en, col = items[k]
+        bg(d, col, t)
+        dark = sum(col) < 330
+        tc, oc = (255, 255, 255), INK
+        d.rounded_rectangle([W/2 - 170, 120, W/2 + 170, 220], 45, fill=(255, 255, 255), outline=INK, width=6)
+        text_c(d, (W/2, 170), f"{k+1} de {len(items)}", 54, INK, (255, 255, 255), 2)
+        text_c(d, (W/2, 340), es, 160 if len(es) <= 7 else 130, tc, oc, 12, scale=ease_back(lt / 0.3))
+        ems = [e for e in ems.replace("️", "")]
+        if len(ems) == 1:
+            paste_emoji(im, ems[0], W/2, 720, 420, ease_back((lt - 0.2) / 0.35))
+        else:
+            for i, ch in enumerate(ems[:3]):
+                paste_emoji(im, ch, 220 + i * 320, 700, 250, ease_back((lt - 0.2 - i * 0.15) / 0.3))
+        s = ease_back((lt - 1.4) / 0.3)
+        if s > 0:
+            bw = (90 * len(en) + 160) * s; bw = min(bw, 960 * s); bh = 220 * s
+            d.rounded_rectangle([W/2 - bw/2, 1100 - bh/2, W/2 + bw/2, 1100 + bh/2], int(55 * s), fill=(255, 255, 255), outline=INK, width=10)
+            fs = 150 if len(en) <= 6 else (120 if len(en) <= 8 else 95)
+            text_c(d, (W/2, 1100), en, fs, tuple(int(v * 0.55) for v in col) if not dark else INK, (255, 255, 255), 4, scale=s)
+            text_c(d, (W/2, 1270), "en inglés", 64, tc, oc, 6, scale=ease_back((lt - 1.7) / 0.3))
+        mood = "festejando" if lt > 2.9 else None
+        if mood:
+            paste_mascota(im, W/2, 1620, 470, t, mood="festejando", char=host, jump=True)
+        else:
+            paste_mascota(im, W/2, 1620, 470, t, talk=True, char=host)
+        return im
+    lt = t2 - len(items) * V_EACH
+    bg(d, (129, 212, 250), t)
+    text_c(d, (W/2, 420), "¡Muy bien!", 150, (255, 255, 255), scale=ease_back(lt / 0.4))
+    text_c(d, (W/2, 590), "Very good!", 120, AMARILLO, INK, 12, scale=ease_back((lt - 0.3) / 0.4))
+    paste_mascota(im, W/2, 1120, 700, t, mood="festejando", char=host, jump=True)
+    text_c(d, (W/2, 1600), "¡Chau chau!", 110, (255, 255, 255), INK, 8, scale=ease_back((lt - 0.8) / 0.4))
+    text_c(d, (W/2, 1740), "Bye bye!", 90, AMARILLO, INK, 8, scale=ease_back((lt - 1.0) / 0.4))
+    return im
+
+def vocab_beats():
+    pops, chimes = [], []
+    for k in range(len(VSET["items"])):
+        st = V_INTRO + k * V_EACH
+        pops += [st + 0.05, st + 0.25]; chimes.append(st + 1.4)
+    return pops, chimes
+
 # ---------------- AUDIO ----------------
 def audio(path, dur, pops, chimes, ticks=(), bpm=120, seed=1):
     sr = 44100; n = int(dur * sr); a = np.zeros(n)
@@ -406,6 +479,10 @@ if __name__ == "__main__":
     if kind == "colores":
         fn, dur = colores_frame, C_INTRO + len(COLORES) * C_EACH + C_END
         pts = [1.5, C_INTRO + 2.2, C_INTRO + 2 * C_EACH + 2.2, dur - 0.5]
+    elif kind in VOCAB:
+        VSET = VOCAB[kind]
+        fn, dur = vocab_frame, V_INTRO + len(VSET["items"]) * V_EACH + V_END
+        pts = [1.8, V_INTRO + 1.0, V_INTRO + 2 * V_EACH + 2.0, V_INTRO + 4 * V_EACH + 3.3, dur - 0.6]
     elif kind in ("pipo", "seequivoca"):
         fn, dur = pipo_frame, P_INTRO + len(RONDAS) * P_EACH + P_END
         pts = [1.8, P_INTRO + 1.8, P_INTRO + 3.6, P_INTRO + 5.6, dur - 1.0]
@@ -422,6 +499,8 @@ if __name__ == "__main__":
     ap = f"/tmp/{kind}.wav"
     if kind == "colores":
         pops, chimes = colores_beats(); audio(ap, dur, pops, chimes, seed=3)
+    elif kind in VOCAB:
+        pops, chimes = vocab_beats(); audio(ap, dur, pops, chimes, bpm=118, seed=len(kind) * 7)
     elif kind in ("pipo", "seequivoca"):
         pops, chimes, ticks = pipo_beats(); audio(ap, dur, pops, chimes, ticks, bpm=115, seed=21)
     elif kind == "animales":
