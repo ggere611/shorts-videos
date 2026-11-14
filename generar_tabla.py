@@ -53,12 +53,13 @@ def frame(fi):
         # progress bar
         d.rounded_rectangle([90, 120, W - 90, 160], 20, fill=(255, 255, 255))
         d.rounded_rectangle([90, 120, 90 + (W - 180) * (n - 1 + min(lt / T_EQ, 1)) / 10, 160], 20, fill=(40, 40, 60))
-        text_c(d, (W/2, 380), f"{TABLE} × {n}", 220, (255, 255, 255), scale=ease_back(lt / 0.35))
+        text_c(d, (W/2, 380), f"{TABLE} × {n}", 220 if len(f"{TABLE}{n}") <= 3 else 180, (255, 255, 255), scale=ease_back(lt / 0.35))
         # groups: n groups of TABLE dots
         cols = 5 if n > 4 else n
         rows = math.ceil(n / cols)
-        gw, gh = 180, 60 + 50 * math.ceil(TABLE / 2)
-        top = 640 + (2 - rows) * gh * 0.5
+        drows = math.ceil(TABLE / 2); sp = 75 if drows <= 2 else 56; rad = 30 if drows <= 2 else 21
+        gw, gh = 180, 34 + sp * drows
+        top = 640 + (2 - rows) * gh * 0.5 - (40 if drows > 3 else 0)
         appear = 1.0
         for g in range(n):
             r_, c_ = divmod(g, cols)
@@ -74,14 +75,14 @@ def frame(fi):
             for k in range(TABLE):
                 kr, kc = divmod(k, 2)
                 per = min(2, TABLE - kr * 2)
-                dx = (kc - (per - 1) / 2) * 75 * gs
-                dy = (kr - (math.ceil(TABLE / 2) - 1) / 2) * 75 * gs
-                rr = 30 * gs
+                dx = (kc - (per - 1) / 2) * sp * gs
+                dy = (kr - (drows - 1) / 2) * sp * gs
+                rr = rad * gs
                 d.ellipse([cx + dx - rr, cy + dy - rr, cx + dx + rr, cy + dy + rr], fill=col, outline=(40, 40, 60), width=4)
         rs = ease_back((lt - 1.5) / 0.35)
         if rs > 0:
             pulse = 1 + 0.06 * math.sin((lt - 1.5) * 12) * max(0, 1 - (lt - 1.5))
-            text_c(d, (W/2, 1450), f"= {TABLE * n}", 300, (255, 255, 255), (40, 40, 60), 14, scale=rs * pulse)
+            text_c(d, (W/2, 1450), f"= {TABLE * n}", 300 if TABLE * n < 100 else 240, (255, 255, 255), (40, 40, 60), 14, scale=rs * pulse)
         return im
     lt = t2 - 10 * T_EQ
     bg(d, (129, 212, 250), t)

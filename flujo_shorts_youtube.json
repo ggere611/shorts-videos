@@ -1,0 +1,121 @@
+{
+  "name": "Shorts automaticos a YouTube",
+  "nodes": [
+    {
+      "parameters": {
+        "rule": { "interval": [ { "field": "hours", "hoursInterval": 1 } ] }
+      },
+      "id": "a1",
+      "name": "Cada 1 hora",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1LTbscUaQO1PVbpQXerLKGBcczwrIGvSgP5iYJyjA2L8/edit",
+          "mode": "url"
+        },
+        "sheetName": { "__rl": true, "value": "gid=0", "mode": "list", "cachedResultName": "Hoja 1" },
+        "filtersUI": { "values": [ { "lookupColumn": "estado", "lookupValue": "aprobado" } ] },
+        "options": {}
+      },
+      "id": "a2",
+      "name": "Leer aprobados",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [220, 0],
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "name",
+        "queryString": "={{ $json.archivo }}",
+        "limit": 1,
+        "filter": {},
+        "options": {}
+      },
+      "id": "a3",
+      "name": "Buscar video en Drive",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": { "__rl": true, "value": "={{ $json.id }}", "mode": "id" },
+        "options": {}
+      },
+      "id": "a4",
+      "name": "Descargar video",
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [660, 0]
+    },
+    {
+      "parameters": {
+        "resource": "video",
+        "operation": "upload",
+        "title": "={{ $('Leer aprobados').item.json.titulo }}",
+        "regionCode": "AR",
+        "categoryId": "27",
+        "binaryProperty": "data",
+        "options": {
+          "description": "={{ $('Leer aprobados').item.json.descripcion }}",
+          "tags": "={{ $('Leer aprobados').item.json.tags }}",
+          "privacyStatus": "public",
+          "selfDeclaredMadeForKids": true,
+          "notifySubscribers": true,
+          "defaultLanguage": "es"
+        }
+      },
+      "id": "a5",
+      "name": "Publicar en YouTube",
+      "type": "n8n-nodes-base.youTube",
+      "typeVersion": 1,
+      "position": [880, 0]
+    },
+    {
+      "parameters": {
+        "operation": "update",
+        "documentId": {
+          "__rl": true,
+          "value": "https://docs.google.com/spreadsheets/d/1LTbscUaQO1PVbpQXerLKGBcczwrIGvSgP5iYJyjA2L8/edit",
+          "mode": "url"
+        },
+        "sheetName": { "__rl": true, "value": "gid=0", "mode": "list", "cachedResultName": "Hoja 1" },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "archivo": "={{ $('Leer aprobados').item.json.archivo }}",
+            "estado": "publicado"
+          },
+          "matchingColumns": ["archivo"],
+          "schema": [
+            { "id": "archivo", "displayName": "archivo", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true },
+            { "id": "estado", "displayName": "estado", "required": false, "defaultMatch": false, "display": true, "type": "string", "canBeUsedToMatch": true }
+          ]
+        },
+        "options": {}
+      },
+      "id": "a6",
+      "name": "Marcar como publicado",
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.5,
+      "position": [1100, 0]
+    }
+  ],
+  "connections": {
+    "Cada 1 hora": { "main": [ [ { "node": "Leer aprobados", "type": "main", "index": 0 } ] ] },
+    "Leer aprobados": { "main": [ [ { "node": "Buscar video en Drive", "type": "main", "index": 0 } ] ] },
+    "Buscar video en Drive": { "main": [ [ { "node": "Descargar video", "type": "main", "index": 0 } ] ] },
+    "Descargar video": { "main": [ [ { "node": "Publicar en YouTube", "type": "main", "index": 0 } ] ] },
+    "Publicar en YouTube": { "main": [ [ { "node": "Marcar como publicado", "type": "main", "index": 0 } ] ] }
+  },
+  "settings": { "executionOrder": "v1" },
+  "pinData": {}
+}
