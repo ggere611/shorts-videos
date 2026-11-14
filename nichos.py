@@ -1,5 +1,6 @@
 """Generador de shorts de nichos nuevos.
 Uso: python3 nichos.py colores salida.mp4 [preview]
+     python3 nichos.py animales salida.mp4 [preview]
      python3 nichos.py calculo salida.mp4 [preview]
 """
 import subprocess, math, sys, wave, os, random
@@ -155,6 +156,76 @@ def calculo_beats():
         pops.append(st + 0.05); ticks += [st + 0.6 + j for j in range(5)]; chimes.append(st + 5.6)
     return pops, chimes, ticks
 
+# ---------------- ¿QUÉ ANIMAL ES? (3 a 8 años) ----------------
+ANIMALES = [("🐶", "PERRO", "¡Guau guau!", (255, 202, 40)), ("🐱", "GATO", "¡Miau!", (129, 212, 250)),
+            ("🐮", "VACA", "¡Muuu!", (165, 214, 167)), ("🦁", "LEÓN", "¡Grrr!", (255, 171, 145)),
+            ("🐘", "ELEFANTE", "¡Pruuu!", (206, 147, 216))]
+ANIMALES2 = [("🐷", "CHANCHO", "¡Oink oink!", (244, 143, 177)), ("🐸", "RANA", "¡Croac!", (165, 214, 167)),
+             ("🦆", "PATO", "¡Cuac cuac!", (129, 212, 250)), ("🐑", "OVEJA", "¡Beee!", (255, 224, 130)),
+             ("🐵", "MONO", "¡U-u a-a!", (255, 171, 145))]
+A_INTRO, A_EACH, A_END = 2.5, 5.4, 3.0
+_sil = {}
+
+def silhouette(ch, size):
+    key = (ch, size)
+    if key not in _sil:
+        e = emoji_img(ch, size)
+        a = e.split()[-1]
+        s = Image.new("RGBA", e.size, (35, 30, 60, 255)); s.putalpha(a)
+        _sil[key] = s
+    return _sil[key]
+
+def animales_frame(t):
+    im = Image.new("RGB", (W, H)); d = ImageDraw.Draw(im)
+    if t < A_INTRO:
+        bg(d, (255, 214, 102), t)
+        text_c(d, (W/2, 640), "¿Qué", 190, (255, 255, 255), scale=ease_back(t / 0.4))
+        text_c(d, (W/2, 850), "animal es?", 160, (229, 57, 53), (255, 255, 255), 12, scale=ease_back((t - 0.2) / 0.4))
+        for i, ch in enumerate(["🐾", "🔍"]):
+            paste_emoji(im, ch, 330 + i * 420, 1250, 250, ease_back((t - 0.6 - i * 0.2) / 0.4))
+        return im
+    t2 = t - A_INTRO
+    if t2 < len(ANIMALES) * A_EACH:
+        k = int(t2 // A_EACH); lt = t2 - k * A_EACH
+        ch, nombre, sonido, col = ANIMALES[k]
+        bg(d, col, t)
+        d.rounded_rectangle([W/2 - 200, 140, W/2 + 200, 250], 50, fill=(255, 255, 255), outline=INK, width=6)
+        text_c(d, (W/2, 195), f"{k+1} de {len(ANIMALES)}", 60, INK, (255, 255, 255), 2)
+        size = 620
+        wob = 1 + 0.03 * math.sin(t * 6)
+        if lt < 3.6:
+            text_c(d, (W/2, 400), "¿Quién es?", 130, (255, 255, 255), scale=ease_back(lt / 0.35))
+            s = silhouette(ch, size); sc = ease_back((lt - 0.2) / 0.4) * wob
+            ss = int(size * sc)
+            if ss > 4:
+                s2 = s.resize((ss, ss), Image.LANCZOS); im.paste(s2, (int(W/2 - ss/2), int(980 - ss/2)), s2)
+            if lt >= 0.6:
+                n = 3 - int(lt - 0.6); n = max(1, min(3, n)); ph = (lt - 0.6) % 1
+                r = 110 * ease_back(min(1, ph / 0.3))
+                d.ellipse([W/2 - r, 1530 - r, W/2 + r, 1530 + r], fill=(255, 255, 255), outline=INK, width=8)
+                text_c(d, (W/2, 1530), str(n), 150, (229, 57, 53), (255, 255, 255), 4, scale=ease_back(min(1, ph / 0.3)))
+        else:
+            rt = lt - 3.6
+            paste_emoji(im, ch, W/2, 980, size, (0.85 + 0.15 * ease_back(rt / 0.35)) * wob)
+            text_c(d, (W/2, 400), nombre, 190 if len(nombre) <= 5 else (150 if len(nombre) <= 8 else 130), (255, 255, 255), scale=ease_back(rt / 0.3))
+            text_c(d, (W/2, 1530), sonido, 120, (229, 57, 53), (255, 255, 255), 10, scale=ease_back((rt - 0.3) / 0.3))
+        return im
+    lt = t2 - len(ANIMALES) * A_EACH
+    bg(d, (129, 212, 250), t)
+    text_c(d, (W/2, 650), "¡MUY BIEN!", 150, (255, 255, 255), scale=ease_back(lt / 0.5))
+    text_c(d, (W/2, 900), "¿Cuántos", 110, INK, (255, 255, 255), 6, scale=ease_back((lt - 0.4) / 0.5))
+    text_c(d, (W/2, 1030), "adivinaste?", 110, (229, 57, 53), (255, 255, 255), 6, scale=ease_back((lt - 0.6) / 0.5))
+    for i, (ch, *_r) in enumerate(ANIMALES):
+        paste_emoji(im, ch, 160 + i * 190, 1400, 170, ease_back((lt - 1.0 - i * 0.12) / 0.3))
+    return im
+
+def animales_beats():
+    pops, chimes, ticks = [], [], []
+    for k in range(len(ANIMALES)):
+        st = A_INTRO + k * A_EACH
+        pops.append(st + 0.2); ticks += [st + 0.6 + j for j in range(3)]; chimes.append(st + 3.6)
+    return pops, chimes, ticks
+
 # ---------------- AUDIO ----------------
 def audio(path, dur, pops, chimes, ticks=(), bpm=120, seed=1):
     sr = 44100; n = int(dur * sr); a = np.zeros(n)
@@ -197,10 +268,15 @@ def render(frame_fn, dur, out, apath):
 
 if __name__ == "__main__":
     kind, out = sys.argv[1], sys.argv[2]
+    if kind == "animales2":
+        ANIMALES[:] = ANIMALES2; kind = "animales"
     preview = len(sys.argv) > 3 and sys.argv[3] == "preview"
     if kind == "colores":
         fn, dur = colores_frame, C_INTRO + len(COLORES) * C_EACH + C_END
         pts = [1.5, C_INTRO + 2.2, C_INTRO + 2 * C_EACH + 2.2, dur - 0.5]
+    elif kind == "animales":
+        fn, dur = animales_frame, A_INTRO + len(ANIMALES) * A_EACH + A_END
+        pts = [1.5, A_INTRO + 1.8, A_INTRO + 3 * A_EACH + 4.3, A_INTRO + 4 * A_EACH + 4.3, dur - 0.5]
     else:
         fn, dur = calculo_frame, M_INTRO + len(PROBLEMAS) * M_EACH + M_END
         pts = [1.5, M_INTRO + 2.0, M_INTRO + 3 * M_EACH + 6.2, dur - 0.5]
@@ -211,6 +287,8 @@ if __name__ == "__main__":
     ap = f"/tmp/{kind}.wav"
     if kind == "colores":
         pops, chimes = colores_beats(); audio(ap, dur, pops, chimes, seed=3)
+    elif kind == "animales":
+        pops, chimes, ticks = animales_beats(); audio(ap, dur, pops, chimes, ticks, bpm=110, seed=11)
     else:
         pops, chimes, ticks = calculo_beats(); audio(ap, dur, pops, chimes, ticks, bpm=130, seed=7)
     render(fn, dur, out, ap)
