@@ -8,8 +8,8 @@ OUT = sys.argv[2] if len(sys.argv) > 2 else f"tabla_{TABLE}.mp4"
 BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 def F(s): return ImageFont.truetype(BOLD, s)
 
-T_INTRO, T_EQ, T_END = 2.5, 2.6, 3.5
-DUR = T_INTRO + 10 * T_EQ + T_END
+T_INTRO, T_EQ, T_QUIZ, T_END = 2.5, 2.6, 5.0, 3.5
+DUR = T_INTRO + 10 * T_EQ + T_QUIZ + T_END
 NF = int(DUR * FPS)
 
 BGS = [(255, 214, 102), (129, 212, 250), (165, 214, 167), (244, 143, 177), (206, 147, 216),
@@ -85,6 +85,21 @@ def frame(fi):
             text_c(d, (W/2, 1450), f"= {TABLE * n}", 300 if TABLE * n < 100 else 240, (255, 255, 255), (40, 40, 60), 14, scale=rs * pulse)
         return im
     lt = t2 - 10 * T_EQ
+    if lt < T_QUIZ:
+        bg(d, (255, 138, 101), t)
+        text_c(d, (W/2, 420), "¡DESAFÍO!", 150, (255, 235, 59), scale=ease_back(lt / 0.4) * (1 + 0.05 * math.sin(t * 10)))
+        text_c(d, (W/2, 780), f"¿{TABLE} × 7?", 230, (255, 255, 255), scale=ease_back((lt - 0.3) / 0.4))
+        if lt < 3.6:
+            k = 3 - int((lt - 0.6) // 1) if lt >= 0.6 else 3
+            k = max(1, min(3, k)); ph = ((lt - 0.6) % 1) if lt >= 0.6 else 0
+            r = 150 * ease_back(min(1, ph / 0.3))
+            d.ellipse([W/2 - r, 1250 - r, W/2 + r, 1250 + r], fill=(255, 255, 255), outline=(40, 40, 60), width=10)
+            text_c(d, (W/2, 1250), str(k), 200, (229, 57, 53), (255, 255, 255), 4, scale=ease_back(min(1, ph / 0.3)))
+        else:
+            text_c(d, (W/2, 1250), f"= {TABLE * 7}", 280, (255, 255, 255), scale=ease_back((lt - 3.6) / 0.35))
+            text_c(d, (W/2, 1550), "¿Acertaste? 🎉".replace(" 🎉", ""), 90, (40, 40, 60), (255, 255, 255), 6, scale=ease_back((lt - 3.9) / 0.4))
+        return im
+    lt -= T_QUIZ
     bg(d, (129, 212, 250), t)
     text_c(d, (W/2, 700), "¡MUY BIEN!", 145, (255, 255, 255), scale=ease_back(lt / 0.5))
     text_c(d, (W/2, 1000), "Suscribite para", 90, (40, 40, 60), (255, 255, 255), 6, scale=ease_back((lt - 0.5) / 0.5))
@@ -118,6 +133,9 @@ def audio(path):
         st = T_INTRO + (nn - 1) * T_EQ
         for g in range(nn): note(900 + 60 * g, st + 0.3 + g / nn, 0.12, 0.15)
         for j, f in enumerate([1047, 1319, 1568]): note(f, st + 1.5 + j * 0.06, 0.6, 0.14)
+    q0 = T_INTRO + 10 * T_EQ
+    for j in range(3): note(660, q0 + 0.6 + j, 0.25, 0.2)
+    for j, f in enumerate([784, 988, 1175, 1568]): note(f, q0 + 3.6 + j * 0.08, 0.7, 0.16)
     a = np.tanh(a * 1.2) * 0.8
     with wave.open(path, "wb") as w:
         w.setnchannels(1); w.setsampwidth(2); w.setframerate(sr)
@@ -125,7 +143,7 @@ def audio(path):
 
 if __name__ == "__main__":
     if len(sys.argv) > 3 and sys.argv[3] == "preview":
-        for s in [1.5, T_INTRO + 9 * T_EQ + 2.2, T_INTRO + 4 * T_EQ + 2.0, DUR - 0.5]:
+        for s in [1.5, T_INTRO + 9 * T_EQ + 2.2, T_INTRO + 10 * T_EQ + 1.0, T_INTRO + 10 * T_EQ + 4.5, DUR - 0.5]:
             frame(int(s * FPS)).save(f"prev_{s:.1f}.jpg", quality=85)
         sys.exit()
     audio("music.wav")
