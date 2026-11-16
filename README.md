@@ -14,3 +14,6 @@ Videos para el canal de YouTube (Shorts infantiles), publicados automáticamente
 
 - `cuentos.py pelota salida.mp4 [preview]`: cuentos entre mascotas con narrador (voz Piper, se baja sola) y avatares que actúan (sprites `mascotas/*_act_*.png`: miradas, saludo, sorpresa, triste).
 - `nichos.py aventura|intruso|laberinto|movete|seequivoca|seequivoca2|animales_en|deportes_en|colores2 salida.mp4`: demás formatos.
+
+- `mascotas3d.py salida_dir [chars] [poses] [px]`: modela las 6 mascotas en 3D con Blender (`pip install bpy`) y renderiza sus gestos a `mascotas3d/`.
+- `episodios.py linterna|globo|ruido salida.mp4 [preview]`: serie de aventuras 3D con narrador; cada episodio es una lista de escenas en `EPISODIOS`. `MASC_DIR=mascotas3d python3 cuentos.py pelota ...` para la pelota en 3D.

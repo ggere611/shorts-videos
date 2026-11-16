@@ -15,6 +15,8 @@ BASE = 1480                       # línea de los pies
 CACHE = os.path.expanduser("~/.cache/shorts_voz")
 VOZ_URL = "https://github.com/rhasspy/piper/releases/download/v0.0.2/voice-es-carlfm-x-low.tar.gz"
 _spr = {}
+SOMBRA = (224, 229, 238)
+DIR = os.environ.get("MASC_DIR", N.MASC_DIR)   # MASC_DIR=mascotas3d -> avatares 3D
 
 # ---------- voz ----------
 def modelo_voz():
@@ -37,7 +39,10 @@ def decir(texto, clave):
 # ---------- actores ----------
 def sprite(char, nombre):
     k = (char, nombre)
-    if k not in _spr: _spr[k] = Image.open(os.path.join(N.MASC_DIR, f"{char}_{nombre}.png")).convert("RGBA")
+    if k not in _spr:
+        p = os.path.join(DIR, f"{char}_{nombre}.png")
+        if not os.path.exists(p): p = os.path.join(DIR, f"{char}_act_saluda1.png")
+        _spr[k] = Image.open(p).convert("RGBA")
     return _spr[k]
 
 def actor(im, d, char, x, t, spr, size=380, dy=0, sy=1.0, ang=0, flip=False, y=BASE):
@@ -45,7 +50,7 @@ def actor(im, d, char, x, t, spr, size=380, dy=0, sy=1.0, ang=0, flip=False, y=B
     if (t % 3.4) < 0.12 and spr in ("alentando", "act_izq", "act_der", "act_arriba"): spr = "alentando_blink" if spr == "alentando" else spr
     w = size * (2 - sy) if sy != 1 else size; h = size * sy
     sw = size * 0.34 * max(0.5, 1 - dy / 320)
-    d.ellipse([x - sw, y - 12, x + sw, y + 22], fill=(224, 229, 238))
+    d.ellipse([x - sw, y - 12, x + sw, y + 22], fill=SOMBRA)
     m = sprite(char, spr).resize((max(4, int(w)), max(4, int(h))), Image.LANCZOS)
     if flip: m = m.transpose(Image.FLIP_LEFT_RIGHT)
     if ang: m = m.rotate(ang, resample=Image.BICUBIC, expand=True)
