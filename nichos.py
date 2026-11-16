@@ -435,6 +435,150 @@ def vocab_beats():
         pops += [st + 0.05, st + 0.25]; chimes.append(st + 1.4)
     return pops, chimes
 
+# ---------------- AVENTURA CON DECISIONES ----------------
+AVENTURA = dict(host="oso", titulo1="¡Aventura!", titulo2="Ayudá al Oso", meta="🍯", meta_txt="a encontrar la miel",
+    pasos=[("¿Por dónde cruzo el río?", ("🌉", "PUENTE"), ("🐊", "COCODRILO"), 0, (129, 212, 250)),
+           ("¿Qué camino sigo?", ("🌵", "ESPINAS"), ("🌼", "FLORES"), 1, (165, 214, 167)),
+           ("¿Quién me dice dónde está?", ("🐝", "ABEJA"), ("🦈", "TIBURÓN"), 0, (255, 224, 130))],
+    final1="¡La encontramos!", final2="¡Gracias, amigo!")
+AV_INTRO, AV_EACH, AV_END = 3.2, 7.0, 4.0
+
+def aventura_frame(t):
+    A = AVENTURA; host = A["host"]
+    im = Image.new("RGB", (W, H)); d = ImageDraw.Draw(im)
+    if t < AV_INTRO:
+        bg(d, (255, 171, 145), t)
+        text_c(d, (W/2, 330), A["titulo1"], 150, (255, 235, 59), scale=ease_back(t / 0.3) * (1 + 0.04 * math.sin(t * 9)))
+        text_c(d, (W/2, 520), A["titulo2"], 110, (255, 255, 255), scale=ease_back((t - 0.3) / 0.3))
+        text_c(d, (W/2, 650), A["meta_txt"], 80, (255, 255, 255), INK, 8, scale=ease_back((t - 0.6) / 0.3))
+        paste_emoji(im, A["meta"], W/2, 880, 240, ease_back((t - 0.9) / 0.4))
+        paste_mascota(im, W/2, 1400, 660, t, talk=True, char=host)
+        return im
+    t2 = t - AV_INTRO; n = len(A["pasos"])
+    if t2 < n * AV_EACH:
+        k = int(t2 // AV_EACH); lt = t2 - k * AV_EACH
+        preg, op1, op2, ok, col = A["pasos"][k]
+        bg(d, col, t)
+        # camino de progreso
+        for i in range(n + 1):
+            x = 190 + i * (W - 380) / n
+            if i < n: d.line([x, 170, x + (W - 380) / n, 170], fill=(255, 255, 255), width=14)
+        for i in range(n + 1):
+            x = 190 + i * (W - 380) / n
+            d.ellipse([x - 26, 144, x + 26, 196], fill=(102, 187, 106) if i <= k else (255, 255, 255), outline=INK, width=6)
+        paste_emoji(im, A["meta"], W - 190, 100, 90, 1)
+        size = 96 if len(preg) <= 22 else 80
+        lines = preg.split(" "); mid = (len(lines) + 1) // 2
+        text_c(d, (W/2, 330), " ".join(lines[:mid]), size, (255, 255, 255), scale=ease_back(lt / 0.3))
+        text_c(d, (W/2, 330 + size * 1.15), " ".join(lines[mid:]), size, (255, 255, 255), scale=ease_back((lt - 0.1) / 0.3))
+        reveal = lt >= 4.2
+        for i, (em, lab) in enumerate((op1, op2)):
+            cx = W/2 + (-260 if i == 0 else 260); cy = 860
+            sc = ease_back((lt - 0.5 - i * 0.2) / 0.3)
+            if sc <= 0: continue
+            good = (i == ok)
+            if reveal and good: sc *= 1.12 + 0.04 * math.sin(t * 10)
+            if reveal and not good: sc *= 0.8
+            bw = 230 * sc
+            ring = (102, 187, 106) if (reveal and good) else ((200, 200, 200) if reveal else INK)
+            d.rounded_rectangle([cx - bw, cy - bw, cx + bw, cy + bw], int(60 * sc), fill=(255, 255, 255), outline=ring, width=int(18 if reveal and good else 8))
+            paste_emoji(im, em, cx, cy - 20 * sc, 270, sc)
+            text_c(d, (cx, cy + 290 * sc), lab, 62 if len(lab) <= 7 else 50, (255, 255, 255), INK, 8, scale=sc)
+            if reveal: paste_emoji(im, "✅" if good else "❌", cx + 170 * sc, cy - 170 * sc, 120, ease_back((lt - 4.2) / 0.3))
+        if not reveal:
+            if lt >= 1.2:
+                c = 3 - int(lt - 1.2); c = max(1, min(3, c)); ph = (lt - 1.2) % 1
+                r = 95 * ease_back(min(1, ph / 0.3))
+                d.ellipse([W/2 - r, 1290 - r, W/2 + r, 1290 + r], fill=(255, 255, 255), outline=INK, width=8)
+                text_c(d, (W/2, 1290), str(c), 130, (229, 57, 53), (255, 255, 255), 4, scale=ease_back(min(1, ph / 0.3)))
+            paste_mascota(im, W/2, 1620, 440, t, talk=lt < 1.2, char=host)
+        else:
+            rt = lt - 4.2
+            mx = W/2 + (-260 if ok == 0 else 260) * smooth_(rt / 0.8)
+            text_c(d, (W/2, 1290), "¡Por acá!", 120, (255, 235, 59), scale=ease_back(rt / 0.3))
+            paste_mascota(im, mx, 1620, 440, t, mood="festejando", char=host, jump=True)
+        return im
+    lt = t2 - n * AV_EACH
+    bg(d, (129, 212, 250), t)
+    text_c(d, (W/2, 380), A["final1"], 100, (255, 255, 255), scale=ease_back(lt / 0.4))
+    paste_emoji(im, A["meta"], W/2, 700, 360, ease_back((lt - 0.2) / 0.5) * (1 + 0.05 * math.sin(t * 8)))
+    paste_mascota(im, W/2, 1250, 620, t, mood="festejando", char=host, jump=True)
+    text_c(d, (W/2, 1640), A["final2"], 100, (255, 235, 59), INK, 10, scale=ease_back((lt - 0.8) / 0.4))
+    text_c(d, (W/2, 1770), "Mañana, otra aventura", 64, (255, 255, 255), INK, 6, scale=ease_back((lt - 1.2) / 0.4))
+    return im
+
+def smooth_(x): x = max(0, min(1, x)); return x * x * (3 - 2 * x)
+
+def aventura_beats():
+    pops, chimes, ticks = [], [], []
+    for k in range(len(AVENTURA["pasos"])):
+        st = AV_INTRO + k * AV_EACH
+        pops += [st + 0.5, st + 0.7]; ticks += [st + 1.2 + j for j in range(3)]; chimes.append(st + 4.2)
+    chimes.append(AV_INTRO + len(AVENTURA["pasos"]) * AV_EACH + 0.2)
+    return pops, chimes, ticks
+
+# ---------------- JUEGO: ENCONTRÁ AL INTRUSO ----------------
+INTRUSO = dict(host="monstruo", rondas=[("🐶", "🐱", 2, 2, 3, "FÁCIL"), ("🍎", "🍊", 3, 3, 5, "MEDIO"),
+                                        ("🐸", "🐢", 4, 4, 9, "DIFÍCIL"), ("🌝", "🌞", 4, 4, 6, "¡EXPERTO!")])
+IN_INTRO, IN_EACH, IN_END = 2.8, 6.4, 3.4
+
+def intruso_frame(t):
+    host = INTRUSO["host"]; R = INTRUSO["rondas"]
+    im = Image.new("RGB", (W, H)); d = ImageDraw.Draw(im)
+    if t < IN_INTRO:
+        bg(d, VIOLETA, t)
+        text_c(d, (W/2, 380), "¡Encontrá", 150, (255, 255, 255), scale=ease_back(t / 0.3))
+        text_c(d, (W/2, 560), "al INTRUSO!", 150, (255, 235, 59), scale=ease_back((t - 0.2) / 0.3) * (1 + 0.04 * math.sin(t * 9)))
+        paste_emoji(im, "🔍", W/2, 820, 220, ease_back((t - 0.5) / 0.4))
+        paste_mascota(im, W/2, 1380, 660, t, talk=True, char=host)
+        return im
+    t2 = t - IN_INTRO
+    if t2 < len(R) * IN_EACH:
+        k = int(t2 // IN_EACH); lt = t2 - k * IN_EACH
+        base, odd, cols, rows, pos, niv = R[k]
+        bg(d, [(129, 212, 250), (165, 214, 167), (255, 204, 128), (244, 143, 177)][k % 4], t)
+        d.rounded_rectangle([W/2 - 260, 110, W/2 + 260, 220], 50, fill=(255, 255, 255), outline=INK, width=6)
+        text_c(d, (W/2, 165), f"{k+1}/{len(R)} · {niv}", 56, INK, (255, 255, 255), 2)
+        reveal = lt >= 4.3
+        text_c(d, (W/2, 320), "¡Acá está!" if reveal else "¿Cuál es distinto?", 92, (255, 255, 255), scale=ease_back((lt - (4.3 if reveal else 0)) / 0.3))
+        gw = 920; cell = gw / cols; gy0 = 460; es = int(cell * 0.78)
+        for i in range(cols * rows):
+            r_, c_ = divmod(i, cols)
+            cx = W/2 - gw/2 + cell * (c_ + 0.5); cy = gy0 + cell * (r_ + 0.5)
+            sc = ease_back((lt - 0.2 - i * 0.6 / (cols * rows)) / 0.25)
+            if sc <= 0: continue
+            is_odd = (i == pos)
+            if reveal and is_odd:
+                rr = cell * 0.56 * (1 + 0.06 * math.sin(t * 10))
+                d.ellipse([cx - rr, cy - rr, cx + rr, cy + rr], fill=(255, 255, 255), outline=(229, 57, 53), width=14)
+                sc *= 1.1
+            elif reveal: sc *= 0.82
+            paste_emoji(im, odd if is_odd else base, cx, cy, es, sc)
+        gy1 = gy0 + cell * rows
+        if not reveal:
+            # barra de tiempo
+            frac = max(0, 1 - max(0, lt - 0.8) / 3.5)
+            d.rounded_rectangle([120, gy1 + 40, W - 120, gy1 + 90], 25, fill=(255, 255, 255), outline=INK, width=5)
+            if frac > 0.02: d.rounded_rectangle([126, gy1 + 46, 126 + (W - 252) * frac, gy1 + 84], 20, fill=(229, 57, 53) if frac < 0.35 else (102, 187, 106))
+            paste_mascota(im, W/2, 1700, 360, t, talk=lt < 0.8, char=host)
+        else:
+            paste_mascota(im, W/2, 1700, 360, t, mood="festejando", char=host, jump=True)
+        return im
+    lt = t2 - len(R) * IN_EACH
+    bg(d, CELESTE, t)
+    text_c(d, (W/2, 420), "¿Cuántos", 140, (255, 255, 255), scale=ease_back(lt / 0.4))
+    text_c(d, (W/2, 590), "encontraste?", 130, (255, 235, 59), scale=ease_back((lt - 0.2) / 0.4))
+    paste_mascota(im, W/2, 1120, 680, t, mood="festejando", char=host, jump=True)
+    text_c(d, (W/2, 1620), "¡Jugá de nuevo mañana!", 68, (255, 255, 255), INK, 8, scale=ease_back((lt - 0.8) / 0.4))
+    return im
+
+def intruso_beats():
+    pops, chimes, ticks = [], [], []
+    for k in range(len(INTRUSO["rondas"])):
+        st = IN_INTRO + k * IN_EACH
+        pops += [st + 0.2 + j * 0.15 for j in range(4)]; ticks += [st + 1.3 + j for j in range(3)]; chimes.append(st + 4.3)
+    return pops, chimes, ticks
+
 # ---------------- AUDIO ----------------
 def audio(path, dur, pops, chimes, ticks=(), bpm=120, seed=1):
     sr = 44100; n = int(dur * sr); a = np.zeros(n)
@@ -485,6 +629,12 @@ if __name__ == "__main__":
     if kind == "colores":
         fn, dur = colores_frame, C_INTRO + len(COLORES) * C_EACH + C_END
         pts = [1.5, C_INTRO + 2.2, C_INTRO + 2 * C_EACH + 2.2, dur - 0.5]
+    elif kind == "aventura":
+        fn, dur = aventura_frame, AV_INTRO + len(AVENTURA["pasos"]) * AV_EACH + AV_END
+        pts = [1.8, AV_INTRO + 2.5, AV_INTRO + 5.2, AV_INTRO + AV_EACH + 5.2, AV_INTRO + 2 * AV_EACH + 2.5, dur - 1.0]
+    elif kind == "intruso":
+        fn, dur = intruso_frame, IN_INTRO + len(INTRUSO["rondas"]) * IN_EACH + IN_END
+        pts = [1.8, IN_INTRO + 2.5, IN_INTRO + IN_EACH + 5.0, IN_INTRO + 2 * IN_EACH + 2.5, IN_INTRO + 3 * IN_EACH + 5.0, dur - 1.0]
     elif kind in VOCAB:
         VSET = VOCAB[kind]
         fn, dur = vocab_frame, V_INTRO + len(VSET["items"]) * V_EACH + V_END
@@ -505,6 +655,10 @@ if __name__ == "__main__":
     ap = f"/tmp/{kind}.wav"
     if kind == "colores":
         pops, chimes = colores_beats(); audio(ap, dur, pops, chimes, seed=3)
+    elif kind == "aventura":
+        pops, chimes, ticks = aventura_beats(); audio(ap, dur, pops, chimes, ticks, bpm=124, seed=31)
+    elif kind == "intruso":
+        pops, chimes, ticks = intruso_beats(); audio(ap, dur, pops, chimes, ticks, bpm=128, seed=41)
     elif kind in VOCAB:
         pops, chimes = vocab_beats(); audio(ap, dur, pops, chimes, bpm=118, seed=len(kind) * 7)
     elif kind in ("pipo", "seequivoca"):
