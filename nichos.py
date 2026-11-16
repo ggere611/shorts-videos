@@ -239,18 +239,25 @@ def mascota_img(char, mood, blink=False):
         _masc[key] = Image.open(os.path.join(MASC_DIR, f"{char}_{mood}{'_blink' if blink else ''}.png")).convert("RGBA")
     return _masc[key]
 
-def paste_mascota(im, cx, cy, size, t, mood="alentando", talk=False, char=None, jump=False):
+def paste_mascota(im, cx, cy, size, t, mood="alentando", talk=False, char=None, jump=False, pose=None, angle=0, flip=False, still=False):
     char = char or HOST
     if talk:
         mood = "hablando" if int(t * 6) % 2 == 0 else "alentando"
     blink = (t % 3.2) < 0.13 and mood != "festejando"
-    m = mascota_img(char, mood, blink)
-    sq = 1 + 0.03 * math.sin(t * 6)
-    hop = abs(math.sin(t * 7)) * 60 if jump else 6 * math.sin(t * 3)
+    if pose:
+        key = (char, "pose_" + pose, False)
+        if key not in _masc: _masc[key] = Image.open(os.path.join(MASC_DIR, f"{char}_pose_{pose}.png")).convert("RGBA")
+        m = _masc[key]
+    else:
+        m = mascota_img(char, mood, blink)
+    sq = 1 if still else 1 + 0.03 * math.sin(t * 6)
+    hop = 0 if still else (abs(math.sin(t * 7)) * 60 if jump else 6 * math.sin(t * 3))
     w, h = int(size * (2 - sq)), int(size * sq)
     if w < 4: return
     mm = m.resize((w, h), Image.LANCZOS)
-    im.paste(mm, (int(cx - w / 2), int(cy - h / 2 - hop)), mm)
+    if flip: mm = mm.transpose(Image.FLIP_LEFT_RIGHT)
+    if angle: mm = mm.rotate(angle, resample=Image.BICUBIC, expand=True)
+    im.paste(mm, (int(cx - mm.width / 2), int(cy - mm.height / 2 - hop)), mm)
 
 # ---------------- PIPO SE EQUIVOCA (mascota original) ----------------
 AMARILLO, CELESTE, CORAL, VIOLETA = (255, 210, 63), (94, 200, 242), (255, 122, 89), (142, 91, 217)
@@ -579,6 +586,275 @@ def intruso_beats():
         pops += [st + 0.2 + j * 0.15 for j in range(4)]; ticks += [st + 1.3 + j for j in range(3)]; chimes.append(st + 4.3)
     return pops, chimes, ticks
 
+# ---------------- LABERINTO ----------------
+import random as _rnd
+from collections import deque
+LAB = dict(host="carpincho", meta="🍊", t1="¡Laberinto!", t2="Llevá al Carpincho", t3="hasta su naranja",
+           niveles=[(5, 6, 4.0, 5.0, 11, "FÁCIL"), (7, 8, 5.0, 7.5, 5, "DIFÍCIL")])
+LB_INTRO, LB_CHEER, LB_END = 2.8, 1.4, 3.2
+_lab = {}
+
+def make_maze(cols, rows, seed):
+    key = (cols, rows, seed)
+    if key in _lab: return _lab[key]
+    r = _rnd.Random(seed); open_ = set(); seen = {(0, 0)}; st = [(0, 0)]
+    while st:
+        x, y = st[-1]
+        nb = [(x + dx, y + dy) for dx, dy in ((1, 0), (-1, 0), (0, 1), (0, -1)) if 0 <= x + dx < cols and 0 <= y + dy < rows and (x + dx, y + dy) not in seen]
+        if not nb: st.pop(); continue
+        n = r.choice(nb); open_.add(frozenset(((x, y), n))); seen.add(n); st.append(n)
+    prev = {(0, 0): None}; q = deque([(0, 0)])
+    while q:
+        c = q.popleft()
+        if c == (cols - 1, rows - 1): break
+        x, y = c
+        for n in ((x + 1, y), (x - 1, y), (x, y + 1), (x, y - 1)):
+            if n not in prev and frozenset((c, n)) in open_: prev[n] = c; q.append(n)
+    path = []; c = (cols - 1, rows - 1)
+    while c is not None: path.append(c); c = prev[c]
+    _lab[key] = (open_, path[::-1]); return _lab[key]
+
+def lab_dur(): return LB_INTRO + sum(n[2] + n[3] + LB_CHEER for n in LAB["niveles"]) + LB_END
+
+def laberinto_frame(t):
+    host = LAB["host"]
+    im = Image.new("RGB", (W, H)); d = ImageDraw.Draw(im)
+    if t < LB_INTRO:
+        bg(d, (165, 214, 167), t)
+        text_c(d, (W/2, 330), LAB["t1"], 150, (255, 235, 59), scale=ease_back(t / 0.3) * (1 + 0.04 * math.sin(t * 9)))
+        text_c(d, (W/2, 520), LAB["t2"], 92, (255, 255, 255), scale=ease_back((t - 0.3) / 0.3))
+        text_c(d, (W/2, 640), LAB["t3"], 92, (255, 255, 255), scale=ease_back((t - 0.5) / 0.3))
+        paste_emoji(im, LAB["meta"], W/2 + 300, 900, 200, ease_back((t - 0.8) / 0.4))
+        paste_mascota(im, W/2 - 80, 1350, 640, t, char=host, pose="profe")
+        return im
+    t2 = t - LB_INTRO
+    for k, (cols, rows, tthink, twalk, seed, niv) in enumerate(LAB["niveles"]):
+        seg = tthink + twalk + LB_CHEER
+        if t2 < seg:
+            open_, path = make_maze(cols, rows, seed)
+            bg(d, [(129, 212, 250), (255, 204, 128)][k % 2], t)
+            d.rounded_rectangle([W/2 - 260, 100, W/2 + 260, 210], 50, fill=(255, 255, 255), outline=INK, width=6)
+            text_c(d, (W/2, 155), f"Nivel {k+1} · {niv}", 56, INK, (255, 255, 255), 2)
+            walking = t2 >= tthink; done = t2 >= tthink + twalk
+            text_c(d, (W/2, 300), "¡Llegó!" if done else ("¡Seguilo!" if walking else "¿Por dónde va?"), 96, (255, 255, 255))
+            gw = 900; cell = gw / cols; x0 = W/2 - gw/2; y0 = 400
+            d.rounded_rectangle([x0 - 16, y0 - 16, x0 + gw + 16, y0 + cell * rows + 16], 30, fill=(255, 255, 255), outline=INK, width=10)
+            for x in range(cols):
+                for y in range(rows):
+                    px, py = x0 + x * cell, y0 + y * cell
+                    if x + 1 < cols and frozenset(((x, y), (x + 1, y))) not in open_: d.line([px + cell, py, px + cell, py + cell], fill=INK, width=12)
+                    if y + 1 < rows and frozenset(((x, y), (x, y + 1))) not in open_: d.line([px, py + cell, px + cell, py + cell], fill=INK, width=12)
+            cen = lambda c: (x0 + (c[0] + 0.5) * cell, y0 + (c[1] + 0.5) * cell)
+            gx, gy = cen(path[-1])
+            if not done: paste_emoji(im, LAB["meta"], gx, gy, int(cell * 0.7), 1 + 0.08 * math.sin(t * 6))
+            if not walking:
+                mx, my = cen(path[0]); paste_mascota(im, mx, my, cell * 0.95, t, char=host)
+                frac = max(0, 1 - t2 / tthink); by = y0 + cell * rows + 60
+                d.rounded_rectangle([120, by, W - 120, by + 50], 25, fill=(255, 255, 255), outline=INK, width=5)
+                if frac > 0.02: d.rounded_rectangle([126, by + 6, 126 + (W - 252) * frac, by + 44], 20, fill=(229, 57, 53) if frac < 0.35 else (102, 187, 106))
+            else:
+                p = min(1, (t2 - tthink) / twalk) * (len(path) - 1); i = min(int(p), len(path) - 2); f = p - i
+                for j in range(i + 1):
+                    a, b = cen(path[j]), cen(path[j + 1]); ff = 1 if j < i else f
+                    d.line([a[0], a[1], a[0] + (b[0] - a[0]) * ff, a[1] + (b[1] - a[1]) * ff], fill=(255, 122, 89), width=int(cell * 0.16))
+                a, b = cen(path[i]), cen(path[i + 1])
+                mx, my = a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f
+                if done: paste_mascota(im, gx, gy, cell * 1.1, t, mood="festejando", char=host, jump=True)
+                else: paste_mascota(im, mx, my, cell * 0.95, t, char=host, angle=9 * math.sin(t * 14), flip=b[0] < a[0], still=True)
+            return im
+        t2 -= seg
+    bg(d, CELESTE, t)
+    text_c(d, (W/2, 380), "¡Lo logramos!", 120, (255, 255, 255), scale=ease_back(t2 / 0.4))
+    paste_mascota(im, W/2, 1000, 700, t, char=host, pose="fruta", jump=True)
+    text_c(d, (W/2, 1560), "¿Encontraste el camino?", 66, (255, 235, 59), INK, 8, scale=ease_back((t2 - 0.6) / 0.4))
+    text_c(d, (W/2, 1700), "Mañana, otro laberinto", 64, (255, 255, 255), INK, 6, scale=ease_back((t2 - 1.0) / 0.4))
+    return im
+
+def laberinto_beats():
+    pops, chimes, ticks = [], [], []; st = LB_INTRO
+    for cols, rows, tthink, twalk, seed, niv in LAB["niveles"]:
+        ticks += [st + 0.5 + j for j in range(int(tthink) - 1)]
+        pops += [st + tthink + j * 0.45 for j in range(int(twalk / 0.45))]
+        chimes.append(st + tthink + twalk); st += tthink + twalk + LB_CHEER
+    return pops, chimes, ticks
+
+# ---------------- MOVETE CON LA MASCOTA ----------------
+MOVETE = dict(host="toro", t1="¡Movete", t2="con el Toro!", pasos=[
+    ("¡ESTIRATE!", "estirar", (129, 212, 250)), ("¡SALTÁ!", "salto", (255, 204, 128)),
+    ("¡SALTÁ LA SOGA!", "soga", (165, 214, 167)), ("¡COMÉ FRUTA!", "fruta", (244, 143, 177)),
+    ("¡TOMÁ AGUA!", "agua", (128, 222, 234))])
+MV_INTRO, MV_EACH, MV_FREEZE, MV_END = 2.8, 4.0, 3.6, 3.0
+
+def movete_frame(t):
+    host = MOVETE["host"]; P = MOVETE["pasos"]
+    im = Image.new("RGB", (W, H)); d = ImageDraw.Draw(im)
+    if t < MV_INTRO:
+        bg(d, (255, 171, 145), t)
+        text_c(d, (W/2, 360), MOVETE["t1"], 170, (255, 255, 255), scale=ease_back(t / 0.3))
+        text_c(d, (W/2, 560), MOVETE["t2"], 130, (255, 235, 59), scale=ease_back((t - 0.2) / 0.3) * (1 + 0.04 * math.sin(t * 9)))
+        text_c(d, (W/2, 720), "¡Parate y copiame!", 76, (255, 255, 255), INK, 8, scale=ease_back((t - 0.8) / 0.3))
+        paste_mascota(im, W/2, 1350, 720, t, talk=True, char=host, jump=True)
+        return im
+    t2 = t - MV_INTRO
+    if t2 < len(P) * MV_EACH:
+        k = int(t2 // MV_EACH); lt = t2 - k * MV_EACH
+        txt, pose, col = P[k]
+        bg(d, col, t)
+        text_c(d, (W/2, 330), txt, 150 if len(txt) <= 9 else 92, (255, 255, 255), scale=ease_back(lt / 0.25) * (1 + 0.05 * math.sin(t * 10)))
+        beat = int(lt / 0.5); up = beat % 2 == 0
+        if pose == "salto": paste_mascota(im, W/2, 1050, 760, t, mood="festejando", char=host, jump=True)
+        elif pose == "estirar":
+            if up: paste_mascota(im, W/2, 1020, 800, t, char=host, pose="estirar", still=True)
+            else: paste_mascota(im, W/2, 1080, 760, t, char=host, still=True)
+        elif pose == "soga":
+            paste_mascota(im, W/2, 1080 - (70 if up else 0), 760, t, char=host, pose="soga", still=True)
+        else:
+            paste_mascota(im, W/2, 1060, 760, t, char=host, pose=pose, angle=6 * math.sin(t * 8), still=True)
+        n = min(4, int(lt) + 1)
+        for i in range(4):
+            cx = W/2 - 240 + i * 160; r = 58 if i == n - 1 else 46
+            d.ellipse([cx - r, 1620 - r, cx + r, 1620 + r], fill=(255, 235, 59) if i < n else (255, 255, 255), outline=INK, width=7)
+            text_c(d, (cx, 1620), str(i + 1), 64, INK, (255, 255, 255), 2)
+        return im
+    lt = t2 - len(P) * MV_EACH
+    if lt < MV_FREEZE:
+        bg(d, VIOLETA, 0)
+        text_c(d, (W/2, 330), "¡ESTATUA!", 160, (255, 235, 59), scale=ease_back(lt / 0.2))
+        text_c(d, (W/2, 500), "No te muevas…", 84, (255, 255, 255), scale=ease_back((lt - 0.3) / 0.3))
+        paste_mascota(im, W/2, 1080, 760, 0.5, char=host, pose="estirar", still=True)
+        c = 3 - int(lt - 0.5) if lt >= 0.5 else 3; c = max(1, min(3, c))
+        d.ellipse([W/2 - 90, 1530, W/2 + 90, 1710], fill=(255, 255, 255), outline=INK, width=8)
+        text_c(d, (W/2, 1620), str(c), 120, (229, 57, 53), (255, 255, 255), 4)
+        return im
+    lt -= MV_FREEZE
+    bg(d, CELESTE, t)
+    text_c(d, (W/2, 380), "¡Muy bien!", 150, (255, 255, 255), scale=ease_back(lt / 0.4))
+    text_c(d, (W/2, 550), "¡Qué energía!", 100, (255, 235, 59), INK, 10, scale=ease_back((lt - 0.3) / 0.4))
+    paste_mascota(im, W/2, 1100, 720, t, mood="festejando", char=host, jump=True)
+    text_c(d, (W/2, 1640), "Mañana nos movemos otra vez", 62, (255, 255, 255), INK, 6, scale=ease_back((lt - 0.8) / 0.4))
+    return im
+
+def movete_beats():
+    pops, chimes, ticks = [], [], []
+    for k in range(len(MOVETE["pasos"])):
+        st = MV_INTRO + k * MV_EACH
+        chimes.append(st); pops += [st + 0.5 * j for j in range(1, 8)]
+    st = MV_INTRO + len(MOVETE["pasos"]) * MV_EACH
+    ticks += [st + 0.5 + j for j in range(3)]; chimes.append(st + MV_FREEZE)
+    return pops, chimes, ticks
+
+# ---------------- CUENTO ENTRE MASCOTAS (fondo limpio, poses claras, pausas) ----------------
+CU_DUR = 31.0
+CU_Y = 1300
+
+def _sombra(d, x, y, size, k=1.0):
+    w = size * 0.36 * k
+    d.ellipse([x - w, y + size * 0.40, x + w, y + size * 0.40 + size * 0.10], fill=(226, 230, 238))
+
+def _actor(im, d, char, x, t, size=340, estado="idle", mira_izq=False, y=CU_Y, entra=None):
+    """estado: idle | habla | camina | triste | festeja | profe"""
+    sc = 1.0
+    if entra is not None:
+        sc = ease_back((t - entra) / 0.35)
+        if sc <= 0.02: return
+    hop = 0; ang = 0
+    if estado == "camina": hop = abs(math.sin(t * 9)) * 34; ang = 7 * math.sin(t * 9)
+    if estado == "festeja": hop = abs(math.sin(t * 8 + x)) * 80
+    _sombra(d, x, y, size * sc, 1 - hop / 260)
+    sq = 1 + (0.05 * math.sin(t * 9 * 2) if estado == "camina" else 0.02 * math.sin(t * 4 + x))
+    kw = dict(char=char, still=True, flip=mira_izq, angle=ang)
+    if estado == "habla": kw["talk"] = True
+    elif estado == "triste": kw["mood"] = "corrigiendo"
+    elif estado == "festeja": kw["mood"] = "festejando"
+    elif estado == "profe": kw["pose"] = "profe"
+    paste_mascota(im, x, y - hop + (1 - sq) * size * 0.3, size * sc * sq, t, **kw)
+
+def _globo(d, x, y, txt, t, t0, size=58):
+    sc = ease_back((t - t0) / 0.25)
+    if sc <= 0.02: return
+    f = F(int(size * sc) or 1); lines = txt.split("\n")
+    w = max(f.getlength(l) for l in lines) + 70 * sc; h = (len(lines) * size * 1.2 + 50) * sc
+    x = max(w / 2 + 20, min(W - w / 2 - 20, x))
+    d.rounded_rectangle([x - w / 2, y - h, x + w / 2, y], int(40 * sc), fill=(255, 255, 255), outline=INK, width=7)
+    d.polygon([(x - 24 * sc, y - 4), (x + 24 * sc, y - 4), (x, y + 44 * sc)], fill=(255, 255, 255), outline=INK)
+    d.line([x - 20 * sc, y - 3, x + 20 * sc, y - 3], fill=(255, 255, 255), width=9)
+    for i, l in enumerate(lines):
+        d.text((x, y - h + (35 + size * 0.6 + i * size * 1.2) * sc), l, font=f, fill=INK, anchor="mm")
+
+def _narra(d, txt, t, t0, col=CORAL):
+    sc = ease_back((t - t0) / 0.3)
+    if sc <= 0.02: return
+    for i, l in enumerate(txt.split("\n")):
+        text_c(d, (W/2, 250 + i * 110), l, 88, col, (255, 255, 255), 10, scale=sc)
+
+def cuento_frame(t):
+    im = Image.new("RGB", (W, H), (250, 251, 253)); d = ImageDraw.Draw(im)
+    d.ellipse([-200, CU_Y + 60, W + 200, CU_Y + 900], fill=(240, 244, 250))  # piso suave
+    lerp = lambda a, b, k: a + (b - a) * smooth_(k)
+    if t < 4.5:      # 1. El Oso quiere jugar
+        _narra(d, "El Oso quiere jugar…", t, 0.2)
+        x = lerp(-200, W/2, t / 1.8)
+        _actor(im, d, "oso", x, t, 420, "camina" if t < 1.8 else ("triste" if t > 2.4 else "idle"))
+        if t > 2.4: _globo(d, x, CU_Y - 270, "¿Y mi pelota?", t, 2.4)
+    elif t < 10:     # 2. Llega la Rana
+        lt = t - 4.5
+        _narra(d, "¡Llega la Rana!", t, 4.6, (67, 160, 71))
+        ox = lerp(W/2, 330, lt / 0.8)
+        rx = lerp(W + 200, 760, lt / 1.4)
+        _actor(im, d, "oso", ox, t, 400, "habla" if 1.6 < lt < 3.2 else "triste")
+        _actor(im, d, "rana", rx, t, 380, "camina" if lt < 1.4 else ("habla" if lt > 3.3 else "idle"), mira_izq=True)
+        if 1.6 < lt < 3.3: _globo(d, ox, CU_Y - 260, "¿Viste\nmi pelota?", t, 4.5 + 1.6)
+        if lt > 3.3: _globo(d, rx, CU_Y - 250, "¡No! Pero\nte ayudo", t, 4.5 + 3.3)
+    elif t < 15:     # 3. Buscan y aparece el Gato
+        lt = t - 10
+        _narra(d, "Buscan y buscan…", t, 10.1, (30, 136, 229))
+        gx = lerp(W + 220, 820, (lt - 1.6) / 1.2)
+        _actor(im, d, "oso", 250, t, 360, "camina" if lt < 2.6 else "idle")
+        _actor(im, d, "rana", 530, t, 340, "camina" if lt < 2.6 else "idle")
+        if lt > 1.6: _actor(im, d, "gato", gx, t, 360, "profe" if lt > 2.8 else "camina", mira_izq=True)
+        if lt > 3.0: _globo(d, gx, CU_Y - 290, "¡Yo vi algo\npor allá!", t, 13.0)
+    elif t < 21.5:   # 4. ¿Dónde está? (pausa para el chico)
+        lt = t - 15
+        _narra(d, "¿Dónde está\nla pelota?" if lt < 4.2 else "¡Atrás del arbusto!", t, 15.1 if lt < 4.2 else 19.2, VIOLETA)
+        paste_emoji(im, "⚽", 955 + 10 * math.sin(t * 5), CU_Y + 40, 110, 1 if lt < 4.2 else 0)
+        mx_show = lt > 4.2
+        if mx_show:
+            my = lerp(CU_Y - 80, CU_Y - 400, (lt - 4.2) / 0.5)
+            _actor(im, d, "monstruo", 720, t, 360, "festeja" if lt > 5 else "idle", y=my)
+            paste_emoji(im, "⚽", 930, CU_Y - 520 - abs(math.sin(t * 6)) * 40, 130, 1)
+        paste_emoji(im, "🌳", 720, CU_Y - 110, 520, 1)
+        _actor(im, d, "oso", 180, t, 320, "festeja" if lt > 4.6 else "idle")
+        _actor(im, d, "rana", 400, t, 300, "festeja" if lt > 4.6 else "idle")
+        if lt < 4.2 and lt > 1.0:
+            c = 3 - int(lt - 1.2) if lt >= 1.2 else 3; c = max(1, min(3, c))
+            d.ellipse([W/2 - 80, 560, W/2 + 80, 720], fill=(255, 255, 255), outline=INK, width=8)
+            text_c(d, (W/2, 640), str(c), 110, (229, 57, 53), (255, 255, 255), 4)
+        if lt > 5.0: _globo(d, 640, CU_Y - 640, "¡La encontré!", t, 20.0)
+    elif t < 27:     # 5. Juegan todos
+        lt = t - 21.5
+        _narra(d, "¿Jugamos todos?", t, 21.6, (251, 140, 0))
+        xs = [150, 410, 670, 930]; chars = ["oso", "rana", "gato", "monstruo"]
+        for i, (c, x) in enumerate(zip(chars, xs)):
+            _actor(im, d, c, x, t, 300, "festeja" if lt > 1.5 else "idle", mira_izq=i >= 2)
+        if lt > 1.2:
+            p = ((lt - 1.2) / 0.7) % 6; i = int(p); f = p - i
+            seq = [0, 1, 2, 3, 2, 1, 0]; a, b = xs[seq[i]], xs[seq[i + 1]]
+            bx = a + (b - a) * f; by = CU_Y - 330 - 330 * math.sin(math.pi * f)
+            paste_emoji(im, "⚽", bx, by, 130, 1)
+        else: paste_emoji(im, "⚽", 930, CU_Y - 330, 130, 1)
+    else:            # 6. Cierre
+        lt = t - 27
+        _narra(d, "¡Jugar juntos\nes más divertido!", t, 27.1, CORAL)
+        for i, (c, x) in enumerate(zip(["oso", "rana", "gato", "monstruo"], [150, 410, 670, 930])):
+            _actor(im, d, c, x, t, 300, "festeja", mira_izq=i >= 2)
+        text_c(d, (W/2, 1760), "Mañana, otra aventura", 64, INK, (255, 255, 255), 4, scale=ease_back((lt - 1.2) / 0.4))
+    return im
+
+def cuento_beats():
+    pops = [2.4, 6.1, 7.8, 13.0, 20.0] + [22.7 + 0.7 * j for j in range(6)]
+    chimes = [0.2, 4.6, 10.1, 19.2, 27.1]; ticks = [16.2, 17.2, 18.2]
+    return pops, chimes, ticks
+
 # ---------------- AUDIO ----------------
 def audio(path, dur, pops, chimes, ticks=(), bpm=120, seed=1):
     sr = 44100; n = int(dur * sr); a = np.zeros(n)
@@ -635,6 +911,15 @@ if __name__ == "__main__":
     elif kind == "intruso":
         fn, dur = intruso_frame, IN_INTRO + len(INTRUSO["rondas"]) * IN_EACH + IN_END
         pts = [1.8, IN_INTRO + 2.5, IN_INTRO + IN_EACH + 5.0, IN_INTRO + 2 * IN_EACH + 2.5, IN_INTRO + 3 * IN_EACH + 5.0, dur - 1.0]
+    elif kind == "laberinto":
+        fn, dur = laberinto_frame, lab_dur()
+        pts = [1.8, LB_INTRO + 2.0, LB_INTRO + 6.5, LB_INTRO + 12.0, LB_INTRO + 19.0, dur - 1.0]
+    elif kind == "movete":
+        fn, dur = movete_frame, MV_INTRO + len(MOVETE["pasos"]) * MV_EACH + MV_FREEZE + MV_END
+        pts = [1.8, MV_INTRO + 0.2, MV_INTRO + MV_EACH + 1.0, MV_INTRO + 2 * MV_EACH + 0.2, MV_INTRO + 3 * MV_EACH + 1.0, MV_INTRO + 5 * MV_EACH + 1.5]
+    elif kind == "cuento":
+        fn, dur = cuento_frame, CU_DUR
+        pts = [3.5, 8.5, 13.8, 17.0, 20.6, 24.0, 29.0]
     elif kind in VOCAB:
         VSET = VOCAB[kind]
         fn, dur = vocab_frame, V_INTRO + len(VSET["items"]) * V_EACH + V_END
@@ -659,6 +944,12 @@ if __name__ == "__main__":
         pops, chimes, ticks = aventura_beats(); audio(ap, dur, pops, chimes, ticks, bpm=124, seed=31)
     elif kind == "intruso":
         pops, chimes, ticks = intruso_beats(); audio(ap, dur, pops, chimes, ticks, bpm=128, seed=41)
+    elif kind == "laberinto":
+        pops, chimes, ticks = laberinto_beats(); audio(ap, dur, pops, chimes, ticks, bpm=116, seed=51)
+    elif kind == "movete":
+        pops, chimes, ticks = movete_beats(); audio(ap, dur, pops, chimes, ticks, bpm=120, seed=61)
+    elif kind == "cuento":
+        pops, chimes, ticks = cuento_beats(); audio(ap, dur, pops, chimes, ticks, bpm=104, seed=71)
     elif kind in VOCAB:
         pops, chimes = vocab_beats(); audio(ap, dur, pops, chimes, bpm=118, seed=len(kind) * 7)
     elif kind in ("pipo", "seequivoca"):
