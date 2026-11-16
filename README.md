@@ -11,3 +11,6 @@ Videos para el canal de YouTube (Shorts infantiles), publicados automáticamente
 - `nichos.py colores|calculo salida.mp4`: generadores de otros nichos.
 - `generar_tabla.py N salida.mp4`: genera el short de la tabla del N (agregar `preview` para ver cuadros sueltos).
 - n8n lee `cola.json` desde la API de GitHub cada 5 minutos, publica, lo anota en la planilla "Publicaciones" y baja el MP4 de este repo.
+
+- `cuentos.py pelota salida.mp4 [preview]`: cuentos entre mascotas con narrador (voz Piper, se baja sola) y avatares que actúan (sprites `mascotas/*_act_*.png`: miradas, saludo, sorpresa, triste).
+- `nichos.py aventura|intruso|laberinto|movete|seequivoca|seequivoca2|animales_en|deportes_en|colores2 salida.mp4`: demás formatos.
