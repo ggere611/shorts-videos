@@ -304,6 +304,10 @@ RONDAS = [("☀️", "El sol es", "AZUL", "AMARILLO", (66, 133, 244)),
           ("🐮", "La vaca hace", "¡GUAU!", "¡MUUU!", None),
           ("🐟", "El pez", "VUELA", "NADA", None),
           ("🍌", "La banana es", "ROJA", "AMARILLA", (229, 57, 53))]
+RONDAS2 = [("🐘", "El elefante es", "CHIQUITO", "GRANDE", None),
+           ("🌙", "La luna sale de", "DÍA", "NOCHE", None),
+           ("🐶", "El perro hace", "¡MIAU!", "¡GUAU!", None),
+           ("🍓", "La frutilla es", "AZUL", "ROJA", (66, 133, 244))]
 P_INTRO, P_EACH, P_END = 3.0, 7.0, 3.5
 
 def pipo_frame(t):
@@ -473,6 +477,8 @@ def render(frame_fn, dur, out, apath):
 
 if __name__ == "__main__":
     kind, out = sys.argv[1], sys.argv[2]
+    if kind == "seequivoca2":
+        RONDAS[:] = RONDAS2; HOST = os.environ.get("MASCOTA", "gato"); kind = "seequivoca"
     if kind == "animales2":
         ANIMALES[:] = ANIMALES2; kind = "animales"
     preview = len(sys.argv) > 3 and sys.argv[3] == "preview"
