@@ -5,11 +5,17 @@ from PIL import Image, ImageDraw, ImageFont
 W, H, FPS = 1080, 1920, 30
 try:
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-    from nichos import paste_mascota
-    MASCOTA = os.environ.get("MASCOTA", "monstruo")
+    from nichos import paste_mascota, paste_emoji
 except Exception:
-    paste_mascota = None
+    paste_mascota = paste_emoji = None
 TABLE = int(sys.argv[1]) if len(sys.argv) > 1 else 2
+# Variación real entre videos (para que no parezcan una plantilla repetida):
+# cada tabla tiene su mascota, su objeto, su pregunta-desafío y su música.
+VARIANTES = {6: ("monstruo", "🍎"), 7: ("toro", "⭐"), 8: ("rana", "⚽"), 9: ("gato", "🍩"), 10: ("oso", "🎈"),
+             2: ("carpincho", "🍊"), 3: ("rana", "🍓"), 4: ("gato", "🐟"), 5: ("oso", "🍯")}
+MASCOTA = os.environ.get("MASCOTA", VARIANTES.get(TABLE, ("monstruo", "⭐"))[0])
+OBJETO = VARIANTES.get(TABLE, ("monstruo", "⭐"))[1]
+Q = (TABLE * 3) % 5 + 5  # factor del desafío: cambia en cada tabla
 OUT = sys.argv[2] if len(sys.argv) > 2 else f"tabla_{TABLE}.mp4"
 BOLD = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 def F(s): return ImageFont.truetype(BOLD, s)
@@ -45,13 +51,21 @@ def frame(fi):
     t = fi / FPS
     im = Image.new("RGB", (W, H)); d = ImageDraw.Draw(im)
     if t < T_INTRO:
+        if t < 1.5:  # gancho: la pregunta del desafío, antes que el título
+            bg(d, (142, 91, 217), t)
+            text_c(d, (W/2, 430), "¿Cuánto es", 120, (255, 255, 255), scale=ease_back(t / 0.25))
+            text_c(d, (W/2, 700), f"{TABLE} × {Q}?", 260, (255, 235, 59), scale=ease_back((t - 0.1) / 0.3) * (1 + 0.04 * math.sin(t * 10)))
+            if paste_mascota: paste_mascota(im, W/2, 1250, 620, t, talk=True, char=MASCOTA)
+            text_c(d, (W/2, 1700), "Pensalo… ¡al final la respuesta!", 58, (255, 255, 255), (40, 40, 60), 6, scale=ease_back((t - 0.5) / 0.3))
+            return im
+        t = t - 1.5
         bg(d, (255, 214, 102), t)
-        s = ease_back(t / 0.6)
+        s = ease_back(t / 0.3)
         wob = 1 + 0.04 * math.sin(t * 8)
         text_c(d, (W/2, 760), "¡TABLA", 190, (255, 255, 255), scale=s * wob)
-        text_c(d, (W/2, 980), f"DEL {TABLE}!", 230, (229, 57, 53), (255, 255, 255), 14, scale=ease_back((t - 0.3) / 0.6) * wob)
-        text_c(d, (W/2, 1300), "¡Aprendé jugando!", 80, (40, 40, 60), (255, 255, 255), 6, scale=ease_back((t - 0.9) / 0.5))
-        if paste_mascota: paste_mascota(im, W/2, 1620, 480 * max(0.01, ease_back((t - 0.4) / 0.5)), t, talk=True, char=MASCOTA)
+        text_c(d, (W/2, 980), f"DEL {TABLE}!", 230, (229, 57, 53), (255, 255, 255), 14, scale=ease_back((t - 0.15) / 0.3) * wob)
+        text_c(d, (W/2, 1300), "¡Aprendé jugando!", 80, (40, 40, 60), (255, 255, 255), 6, scale=ease_back((t - 0.4) / 0.3))
+        if paste_mascota: paste_mascota(im, W/2, 1620, 480, t, talk=True, char=MASCOTA)
         return im
     t2 = t - T_INTRO
     if t2 < 10 * T_EQ:
@@ -85,17 +99,21 @@ def frame(fi):
                 dx = (kc - (per - 1) / 2) * sp * gs
                 dy = (kr - (drows - 1) / 2) * sp * gs
                 rr = rad * gs
-                d.ellipse([cx + dx - rr, cy + dy - rr, cx + dx + rr, cy + dy + rr], fill=col, outline=(40, 40, 60), width=4)
+                if paste_emoji: paste_emoji(im, OBJETO, cx + dx, cy + dy, int(rad * 2.3), gs)
+                else: d.ellipse([cx + dx - rr, cy + dy - rr, cx + dx + rr, cy + dy + rr], fill=col, outline=(40, 40, 60), width=4)
         rs = ease_back((lt - 1.5) / 0.35)
         if rs > 0:
             pulse = 1 + 0.06 * math.sin((lt - 1.5) * 12) * max(0, 1 - (lt - 1.5))
             text_c(d, (W/2, 1450), f"= {TABLE * n}", 300 if TABLE * n < 100 else 240, (255, 255, 255), (40, 40, 60), 14, scale=rs * pulse)
+        if paste_mascota:
+            if rs > 0: paste_mascota(im, 190, 1730, 280, t, mood="festejando", char=MASCOTA, jump=True)
+            else: paste_mascota(im, 190, 1730, 280, t, talk=True, char=MASCOTA)
         return im
     lt = t2 - 10 * T_EQ
     if lt < T_QUIZ:
         bg(d, (255, 138, 101), t)
         text_c(d, (W/2, 420), "¡DESAFÍO!", 150, (255, 235, 59), scale=ease_back(lt / 0.4) * (1 + 0.05 * math.sin(t * 10)))
-        text_c(d, (W/2, 780), f"¿{TABLE} × 7?", 230, (255, 255, 255), scale=ease_back((lt - 0.3) / 0.4))
+        text_c(d, (W/2, 780), f"¿{TABLE} × {Q}?", 230, (255, 255, 255), scale=ease_back((lt - 0.3) / 0.4))
         if lt < 3.6:
             k = 3 - int((lt - 0.6) // 1) if lt >= 0.6 else 3
             k = max(1, min(3, k)); ph = ((lt - 0.6) % 1) if lt >= 0.6 else 0
@@ -103,7 +121,7 @@ def frame(fi):
             d.ellipse([W/2 - r, 1250 - r, W/2 + r, 1250 + r], fill=(255, 255, 255), outline=(40, 40, 60), width=10)
             text_c(d, (W/2, 1250), str(k), 200, (229, 57, 53), (255, 255, 255), 4, scale=ease_back(min(1, ph / 0.3)))
         else:
-            text_c(d, (W/2, 1250), f"= {TABLE * 7}", 280, (255, 255, 255), scale=ease_back((lt - 3.6) / 0.35))
+            text_c(d, (W/2, 1250), f"= {TABLE * Q}", 280, (255, 255, 255), scale=ease_back((lt - 3.6) / 0.35))
             text_c(d, (W/2, 1550), "¿Acertaste? 🎉".replace(" 🎉", ""), 90, (40, 40, 60), (255, 255, 255), 6, scale=ease_back((lt - 3.9) / 0.4))
         return im
     lt -= T_QUIZ
@@ -128,8 +146,11 @@ def audio(path):
         w = np.sin(2 * np.pi * f * tt) + 0.3 * np.sin(4 * np.pi * f * tt)
         env = np.minimum(1, tt / 0.01) * np.exp(-tt * 5)
         a[i0:i0 + m] += vol * w * env
-    bpm = 120; b = 60 / bpm
-    mel = [523, 659, 784, 659, 587, 698, 880, 698, 523, 659, 784, 1047, 988, 784, 659, 587]
+    import random
+    rng = random.Random(TABLE * 13)
+    bpm = 108 + (TABLE * 7) % 24; b = 60 / bpm
+    esc = [523, 587, 659, 784, 880, 1047]
+    mel = [rng.choice(esc) for _ in range(16)]
     bass = [131, 131, 175, 175, 131, 131, 196, 196]
     k = 0; tt = 0.0
     while tt < DUR - 0.5:
@@ -151,7 +172,7 @@ def audio(path):
 
 if __name__ == "__main__":
     if len(sys.argv) > 3 and sys.argv[3] == "preview":
-        for s in [1.5, T_INTRO + 9 * T_EQ + 2.2, T_INTRO + 10 * T_EQ + 1.0, T_INTRO + 10 * T_EQ + 4.5, DUR - 0.5]:
+        for s in [0.9, 2.2, T_INTRO + 9 * T_EQ + 2.2, T_INTRO + 10 * T_EQ + 1.0, T_INTRO + 10 * T_EQ + 4.5, DUR - 0.5]:
             frame(int(s * FPS)).save(f"prev_{s:.1f}.jpg", quality=85)
         sys.exit()
     audio("music.wav")
@@ -165,4 +186,4 @@ if __name__ == "__main__":
         p.stdin.write(frame(fi).tobytes())
     p.stdin.close()
     if p.wait() == 0:
-        import os; os.replace(tmp, OUT); print("ok", OUT, DUR)
+        os.replace(tmp, OUT); print("ok", OUT, DUR); print(f"DESAFIO: {TABLE} x {Q} = {TABLE * Q} | MASCOTA: {MASCOTA}")
