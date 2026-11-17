@@ -224,13 +224,15 @@ def susto(t, lt):
     s = lerp(0.35, 1.5, g); jx, jy = random.Random(int(t * 30)).uniform(-26, 26), random.Random(int(t * 30) + 1).uniform(-26, 26)
     perro(d, W / 2 + jx, 760 + jy, s); return ojos(im, W / 2 + jx, 720 + jy, 1.0 + 1.6 * g, 1)
 
-def ingenio(im, t, rojo=0.0):
-    im = luz(im, LUNA, 800, 430); d = ImageDraw.Draw(im)
-    d.ellipse([757, 387, 843, 473], fill=(206, 212, 228)); d.rectangle([0, 1280, W, H], fill=(5, 6, 10))
+def ingenio(im, t, rojo=0.0, humo=True, apagado=False, luna=True):
+    if luna: im = luz(im, LUNA, 800, 430)
+    d = ImageDraw.Draw(im)
+    if luna: d.ellipse([757, 387, 843, 473], fill=(206, 212, 228))
+    d.rectangle([0, 1280, W, H], fill=(5, 6, 10))
     d.polygon([(120, 1290), (120, 1010), (330, 930), (540, 1010), (540, 1290)], fill=(4, 5, 9))
     d.polygon([(250, 1100), (268, 520), (332, 520), (350, 1100)], fill=(4, 5, 9))
-    for j in range(3): d.rectangle([170 + j * 120, 1120, 220 + j * 120, 1190], fill=(int(lerp(70, 200, rojo)), int(lerp(55, 20, rojo)), int(lerp(20, 10, rojo))))
-    for j in range(7):
+    for j in range(3): d.rectangle([170 + j * 120, 1120, 220 + j * 120, 1190], fill=(12, 12, 16) if apagado else (int(lerp(70, 200, rojo)), int(lerp(55, 20, rojo)), int(lerp(20, 10, rojo))))
+    for j in range(7 if humo else 0):
         ph = (t * 0.22 + j / 7) % 1; r = 40 + 120 * ph; xh = 300 + 90 * ph + 30 * math.sin(t + j); yh = 520 - 430 * ph
         g = int(lerp(46, 14, ph)); d.ellipse([xh - r, yh - r * 0.7, xh + r, yh + r * 0.7], fill=(int(g + 60 * rojo * (1 - ph)), g, g + 4))
     return im
@@ -396,7 +398,116 @@ def sonido(L, path, M):
     with wave.open(path, "wb") as o:
         o.setnchannels(1); o.setsampwidth(2); o.setframerate(SR); o.writeframes((a * 32767).astype(np.int16).tobytes())
 
-EPISODIOS = {"familiar": (FAMILIAR, cuadro, marcas1), "familiar2": (FAMILIAR2, cuadro2, marcas2)}
+# ------------------------------------------------------------------ parte 3
+FAMILIAR3 = dict(
+  titulo="El Familiar · Final", ep=3, proximo="El Lobizón",
+  beats=[
+    ("frio",   "Todos los años, la misma noche, el patrón deja una puerta abierta.", 0.9),
+    ("origen", "Hace treinta años, el ingenio se moría. Una noche, alguien golpeó tres veces.", 1.7),
+    ("trato",  "Era un hombre de negro, con un perro atado. Le ofreció cosechas eternas. A cambio de darle de comer... una vez al año.", 0.8),
+    ("firma",  "El patrón firmó. Y esa misma noche, el perro quedó suelto.", 1.4),
+    ("anios",  "Treinta años. Treinta peones. Treinta faroles.", 1.0),
+    ("hoy",    "Pero este año pasó algo distinto. Ramón no contestó. Y el Familiar... volvió con hambre.", 0.9),
+    ("casa",   "Esa noche, el patrón escuchó cadenas. Subiendo la escalera.", 1.8),
+    ("puerta", "Cerró con llave. Las cadenas... se frenaron del otro lado.", 2.2),
+    ("voz",    "Y una voz que él conocía le dijo: ya comí tu parte. Ahora vengo por la mía.", 1.3),
+    ("scare",  "", 1.7),
+    ("final",  "A la mañana, el ingenio amaneció apagado. Por primera vez en treinta años.", 1.2),
+    ("cierre", "En el camino había un farol más. Y ese... nadie lo quiso levantar.", 3.0),
+  ])
+
+def cadena_colgada(d, amp):
+    px, py = 540, 560
+    for j in range(13):
+        qx, qy = 540 + amp * ((j + 1) / 13) ** 1.5, 560 + (j + 1) * 46
+        d.line([(px, py), (qx, qy)], fill=(2, 2, 3), width=10); d.ellipse([qx - 13, qy - 13, qx + 13, qy + 13], outline=(2, 2, 3), width=7); px, py = qx, qy
+    d.ellipse([px - 70, py, px + 70, py + 110], outline=(2, 2, 3), width=16)
+
+def vano(abierto=1.0):
+    """Interior oscuro con una puerta al fondo; abierto 0..1 = cuánta luz roja entra."""
+    im = Image.new("RGB", (W, H), (3, 3, 5)); d = ImageDraw.Draw(im)
+    d.polygon([(330, 1500), (330, 560), (750, 560), (750, 1500)], fill=(int(8 + 38 * abierto), int(6 + 2 * abierto), 6))
+    if abierto > 0.05: im = luz(im, Image.eval(GLOW[0], lambda v: int(v * 0.8 * abierto)).resize((1300, 1300)), 540, 1000)
+    d = ImageDraw.Draw(im); d.rectangle([0, 1500, W, H], fill=(8, 6, 7))
+    d.polygon([(330, 1500), (750, 1500), (980, H), (100, H)], fill=(int(8 + 26 * abierto), int(6 + 4 * abierto), 8)); return im
+
+def cuadro3(L, t):
+    ep = L.ep; b, lt = L.en(t); k = b["clave"]
+    if k == "scare": return post(susto(t, lt), L, t)
+    if k == "frio":
+        im = ingenio(CIELO.copy(), t, rojo=1.0); d = ImageDraw.Draw(im)
+        canaveral(d, t, -1, base=1700, alto=420); canaveral(d, t, 1, base=1700, alto=420); a = sm(lt / 1.0)
+        d.text((W / 2, 300), "PARTE 3", font=F(110), fill=(int(190 * a), 0, 0), anchor="mm", stroke_width=4, stroke_fill=(0, 0, 0))
+        d.text((W / 2, 400), "EL PACTO", font=F(60, False), fill=(int(200 * a),) * 3, anchor="mm", stroke_width=4, stroke_fill=(0, 0, 0))
+    elif k == "origen":                                   # puerta cerrada; tres golpes la sacuden
+        gol = [b["vd"] + 0.15, b["vd"] + 0.6, b["vd"] + 1.05]; sac = max([max(0, 1 - (lt - g) / 0.18) if lt >= g else 0 for g in gol])
+        im = vano(0.06 + 0.5 * sac); d = ImageDraw.Draw(im)
+        d.line([(540 + 8 * sac, 560), (540 + 8 * sac, 1500)], fill=(0, 0, 0), width=6); d.ellipse([690, 1010, 716, 1036], fill=(60, 50, 30))
+    elif k == "trato":                                    # la puerta abierta: el hombre de negro y el perro
+        ab = sm(lt / 1.2); im = vano(ab); d = ImageDraw.Draw(im); c = (0, 0, 0); gy = 1500
+        d.polygon([(470, gy), (640, gy), (610, 760), (500, 760)], fill=c); d.ellipse([515, 650, 595, 760], fill=c); d.ellipse([455, 668, 655, 706], fill=c); d.rectangle([505, 610, 605, 690], fill=c)
+        d.ellipse([650, 1290, 760, 1500], fill=c); d.ellipse([662, 1210, 748, 1310], fill=c)             # perro sentado
+        for q in (-1, 1): d.polygon([(705 + q * 22, 1230), (705 + q * 52, 1150), (705 + q * 40, 1260)], fill=c)
+        d.line([(610, 1040), (700, 1300)], fill=c, width=7)
+        im = ojos(im, 705, 1258, 0.16, sm((lt - b["vd"] * 0.6) / 1.0))
+    elif k == "firma":
+        im = vano(1.0); d = ImageDraw.Draw(im); cadena_colgada(d, 90 * math.sin(t * 2.1) * max(0.25, 1 - lt / 6))
+    elif k == "anios":                                    # una fila de faroles en el camino
+        im = sendero(t); n_ = int(1 + 30 * sm(lt / max(0.1, b["vd"] + 0.6))); rr = random.Random(4)
+        for j in range(min(30, n_)):
+            f = j / 29; yy_ = lerp(H - 120, SUELO - 10, f ** 0.6); half = lerp(400, 90, f ** 0.6); xx_ = W / 2 + rr.uniform(-1, 1) * half; sc = lerp(1.0, 0.25, f ** 0.6)
+            im = luz(im, GLOW[1 + (int(t * 6) + j) % 2].resize((int(300 * sc) + 20,) * 2), xx_, yy_)
+            ImageDraw.Draw(im).rectangle([xx_ - 9 * sc, yy_ - 22 * sc, xx_ + 9 * sc, yy_ + 14 * sc], fill=(255, 200, 110))
+        im = bruma(im, t, k=0.3)
+    elif k == "hoy":
+        im = sendero(t); a = sm(lt / 1.5); e = lerp(0.14, 0.62, sm((lt - b["vd"] * 0.55) / (b["vd"] * 0.6)))
+        im = ojos(im, 540, SUELO - 130 + 40 * e, e, a); im = bruma(im, t)
+    elif k == "casa":                                     # el cuarto del patrón: ventana con luna
+        im = Image.new("RGB", (W, H), (4, 4, 8)); d = ImageDraw.Draw(im)
+        d.rectangle([600, 520, 900, 1000], fill=(30, 40, 78)); im = luz(im, LUNA.resize((300, 300)), 800, 640); d = ImageDraw.Draw(im)
+        d.line([(750, 520), (750, 1000)], fill=(4, 4, 8), width=12); d.line([(600, 760), (900, 760)], fill=(4, 4, 8), width=12)
+        d.polygon([(600, 1560), (900, 1560), (1080, H), (520, H)], fill=(14, 18, 34))
+        gy = 1640; c = (0, 0, 0); gira = sm((lt - b["vd"] * 0.5) / 0.6) * 40
+        d.polygon([(250, gy), (450, gy), (420, gy - 540), (280, gy - 540)], fill=c); d.ellipse([300 - gira * 0.3, gy - 660, 400 - gira * 0.3, gy - 540], fill=c)
+    elif k in ("puerta", "voz"):                          # la puerta desde adentro: luz roja por debajo
+        im = Image.new("RGB", (W, H), (3, 3, 5)); d = ImageDraw.Draw(im)
+        d.rectangle([330, 520, 750, 1500], fill=(12, 10, 10)); d.rectangle([330, 520, 750, 1500], outline=(0, 0, 0), width=10); d.ellipse([690, 1010, 716, 1036], fill=(70, 58, 34))
+        a = sm(lt / 1.5) if k == "puerta" else 1.0; gr = 8 + (34 * sm((lt - b["vd"] * 0.5) / 1.5) if k == "voz" else 0)
+        d.rectangle([336, 1500 - gr, 744, 1500], fill=(int(220 * a), int(18 * a), int(10 * a)))
+        im = luz(im, Image.eval(GLOW[0], lambda v: int(v * 0.7 * a)).resize((1100, 500)), 540, 1520)
+        if k == "voz": im = ojos(im, 540, 1500 - gr / 2, 0.11, sm((lt - b["vd"] * 0.7) / 0.8))
+    elif k == "final":
+        im = ingenio(CIELO_ALBA.copy(), t, humo=False, apagado=True, luna=False); d = ImageDraw.Draw(im)
+        canaveral(d, t, -1, base=1700, alto=420, col=(18, 20, 26)); canaveral(d, t, 1, base=1700, alto=420, col=(18, 20, 26))
+    else:
+        im = sendero(t, alba=True); d = ImageDraw.Draw(im)
+        d.rectangle([525, SUELO + 40, 555, SUELO + 96], fill=(255, 190, 90)); im = luz(im, GLOW[1 + int(t * 7) % 2].resize((480, 480)), 540, SUELO + 70); im = bruma(im, t, alba=True)
+        d = ImageDraw.Draw(im)
+        if lt > b["vd"] + 0.4:
+            a = sm((lt - b["vd"] - 0.4) / 0.9)
+            d.text((W / 2, 660), "FIN", font=F(170), fill=(int(200 * a), int(10 * a), int(10 * a)), anchor="mm", stroke_width=5, stroke_fill=(0, 0, 0))
+            d.text((W / 2, 800), "de El Familiar", font=F(52), fill=(int(220 * a),) * 3, anchor="mm", stroke_width=4, stroke_fill=(0, 0, 0))
+            d.text((W / 2, 900), f"Próxima historia: {ep['proximo']}", font=F(44, False), fill=(int(200 * a),) * 3, anchor="mm", stroke_width=4, stroke_fill=(0, 0, 0))
+    d = ImageDraw.Draw(im)
+    if k != "frio": cabecera(d, ep)
+    subtitulo(d, b, lt)
+    return post(im, L, t)
+
+def golpe():
+    m = int(0.3 * SR); tt = np.arange(m) / SR
+    return (np.sin(2 * np.pi * (95 - 80 * tt) * tt) * np.exp(-tt * 14) + 0.3 * np.random.default_rng(2).standard_normal(m) * np.exp(-tt * 60)) * 0.95
+
+def marcas3(L):
+    g = lambda c: next(b for b in L.b if b["clave"] == c)
+    to, tfi, tca, tp, tv, ts = (L.ini(c) for c in ("origen", "firma", "casa", "puerta", "voz", "scare"))
+    extra = [(to + g("origen")["vd"] + d_, golpe()) for d_ in (0.15, 0.6, 1.05)]
+    extra += [(tp + g("puerta")["vd"] + 0.5, susurro("Abrime.", "p1", 0.5, 1.5)), (tv + g("voz")["vd"] + 0.1, susurro("Abrime.", "p2", 0.45, 1.8))]
+    cad = [(tfi + g("firma")["vd"] * 0.7 + i * 0.5, 0.3) for i in range(3)]
+    x = tca + g("casa")["vd"] * 0.35; v = 0.22
+    while x < tp + g("puerta")["vd"] * 0.6: cad.append((x, v)); x += 0.6; v = min(0.6, v + 0.06)
+    return dict(lat=tca, sil=[(tp + g("puerta")["vd"] * 0.7, tv)], susto=ts, campana=L.ini("final"), cadenas=cad, extra=extra)
+
+EPISODIOS = {"familiar": (FAMILIAR, cuadro, marcas1), "familiar2": (FAMILIAR2, cuadro2, marcas2), "familiar3": (FAMILIAR3, cuadro3, marcas3)}
 if __name__ == "__main__":
     cual, out = sys.argv[1], sys.argv[2]; ep, cq, mk = EPISODIOS[cual]; L = Linea(ep, cual); fn = lambda t: cq(L, t)
     if len(sys.argv) > 3:
