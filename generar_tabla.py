@@ -35,6 +35,10 @@ def ease_back(t):
 def text_c(d, xy, s, size, fill, outline=(40, 40, 60), sw=10, scale=1.0):
     if scale <= 0.01: return
     f = F(max(1, int(size * scale)))
+    wpx = d.textbbox((0, 0), s, font=f, stroke_width=max(1, int(sw * scale)))[2]
+    if wpx > W - 120:  # que nunca se salga de pantalla (ej. tabla del 10)
+        scale *= (W - 120) / wpx
+        f = F(max(1, int(size * scale)))
     d.text(xy, s, font=f, fill=fill, anchor="mm", stroke_width=max(1, int(sw * scale)), stroke_fill=outline)
 
 def bg(d, color, t):
