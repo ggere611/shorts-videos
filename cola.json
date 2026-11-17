@@ -237,33 +237,35 @@
     "duracion": 10,
     "resolucion": "720p",
     "prompt": "Cinematic suspense thriller, vertical 9:16, night. View from inside an airliner cockpit over the shoulder of a pilot seen from behind, snowy mountains and a dark lake below, runway lights glowing ahead. A huge disc-shaped craft with slowly rotating green lights and one pulsing orange light glides silently right beside the right wing. Suddenly all the runway lights and the city lights go completely black. The pilot turns his head toward the object. Dark blue tones, heavy tension, film grain, handheld camera, photorealistic, low ominous drone sound, no text, no captions.",
-    "nota": "Clip generado y guardado en Drive (CLIP_IA_inexplicable_bariloche_1.mp4). NO publicado: YouTube devolvió uploadLimitExceeded el 17/11. Publicar desde Drive cuando se libere el límite, sin regenerar."
+    "nota": "Clip generado y guardado en Drive (CLIP_IA_inexplicable_bariloche_1.mp4). NO publicado: YouTube sigue devolviendo uploadLimitExceeded (verificado 17/11 19:53 ART). Publicar con el flujo n8n 'Publicar clips pendientes (una vez)' (id HapNdKlZU0pmoYgX) cuando se libere el límite; no regenerar."
   },
   {
     "archivo": "inexplicable_pajarillo_2.mp4",
     "titulo": "Apareció una huella de 122 metros en el cerro… y nadie vio quién la hizo 🛸 #shorts #misterio",
     "descripcion": "Enero de 1986. Capilla del Monte, Córdoba.\nDe noche, una vecina se asoma a la ventana: hay una luz intensa sobre la sierra, balanceándose despacio.\nA la mañana, en el cerro Pajarillo hay algo que ayer no estaba.\nUna marca enorme de pasto quemado. Más de cien metros. Un óvalo casi perfecto.\nNo hay huellas de vehículos. No hay rastros de fuego alrededor.\nEl caso salió en los noticieros de todo el país… y el pueblo nunca volvió a ser el mismo.\n\n👉 ¿Qué creés que la dejó? Te leo en los comentarios.\n🔔 Seguime para más casos de Argentina inexplicable.\n\nRecreación generada con IA, basada en los relatos del caso de la Huella del Pajarillo (1986).\n\n#misterio #ovni #shorts #argentina #capilladelmonte #uritorco #inexplicable #suspenso #paranormal #casosreales #cordoba",
     "tags": "huella del pajarillo,capilla del monte,uritorco,ovni,misterio,argentina,inexplicable,suspenso,casos reales,shorts",
-    "estado": "generar",
+    "estado": "generado",
     "para_ninos": false,
     "categoria": "24",
     "audio": true,
     "duracion": 8,
     "resolucion": "720p",
-    "prompt": "Cinematic suspense, vertical 9:16. Aerial drone shot at dawn slowly flying over dry rocky hills in central Argentina, revealing a gigantic perfectly oval patch of burnt black grass more than one hundred meters wide on a hillside, thin smoke still rising from it, a few tiny people standing at its edge looking at it, low fog in the valley, cold blue morning light, eerie atmosphere, film grain, photorealistic, low ominous drone sound, no text, no captions."
+    "prompt": "Cinematic suspense, vertical 9:16. Aerial drone shot at dawn slowly flying over dry rocky hills in central Argentina, revealing a gigantic perfectly oval patch of burnt black grass more than one hundred meters wide on a hillside, thin smoke still rising from it, a few tiny people standing at its edge looking at it, low fog in the valley, cold blue morning light, eerie atmosphere, film grain, photorealistic, low ominous drone sound, no text, no captions.",
+    "nota": "Clip generado y guardado en Drive (CLIP_IA_inexplicable_pajarillo_2.mp4). NO publicado: YouTube sigue devolviendo uploadLimitExceeded (verificado 17/11 19:53 ART). Publicar con el flujo n8n 'Publicar clips pendientes (una vez)' (id HapNdKlZU0pmoYgX) cuando se libere el límite; no regenerar."
   },
   {
     "archivo": "inexplicable_familiar_3.mp4",
     "titulo": "El perro del diablo que se llevaba un obrero por año 👹⛓️ #shorts #leyendas",
     "descripcion": "Norte argentino. Los viejos ingenios azucareros.\nDicen que de noche, entre los cañaverales, se escuchan cadenas arrastrándose.\nY que si mirás bien, entre la niebla aparecen dos ojos rojos.\nLo llaman El Familiar: un perro negro, enorme, sin cabeza según algunos.\nLa leyenda cuenta que el patrón hizo un pacto: riqueza a cambio de un obrero por año.\nEl que se cruzaba con él… no volvía.\n\n👉 ¿Conocías esta leyenda? ¿Te la contaron de chico? Te leo en los comentarios.\n🔔 Seguime para más historias de Argentina inexplicable.\n\nLeyenda popular del noroeste argentino. Recreación generada con IA.\n\n#leyendas #terror #shorts #argentina #elfamiliar #tucuman #leyendasargentinas #suspenso #paranormal #miedo #folklore",
     "tags": "el familiar,leyendas argentinas,terror,tucuman,ingenio,leyenda,suspenso,paranormal,argentina,shorts",
-    "estado": "generar",
+    "estado": "generado",
     "para_ninos": false,
     "categoria": "24",
     "audio": true,
     "duracion": 8,
     "resolucion": "720p",
-    "prompt": "Cinematic horror suspense, vertical 9:16, night. A narrow dirt path between tall sugarcane fields in northern Argentina, thick low fog, an old brick sugar mill with a tall chimney in the background under a pale moon. A huge black dog silhouette with two glowing red eyes slowly walks toward the camera dragging heavy iron chains on the ground. In the foreground, seen from behind, a rural worker holding an oil lantern stands frozen. Dark desaturated tones, film grain, handheld camera, photorealistic, sound of chains dragging and distant wind, no text, no captions."
+    "prompt": "Cinematic horror suspense, vertical 9:16, night. A narrow dirt path between tall sugarcane fields in northern Argentina, thick low fog, an old brick sugar mill with a tall chimney in the background under a pale moon. A huge black dog silhouette with two glowing red eyes slowly walks toward the camera dragging heavy iron chains on the ground. In the foreground, seen from behind, a rural worker holding an oil lantern stands frozen. Dark desaturated tones, film grain, handheld camera, photorealistic, sound of chains dragging and distant wind, no text, no captions.",
+    "nota": "Clip generado y guardado en Drive (CLIP_IA_inexplicable_familiar_3.mp4). NO publicado: YouTube sigue devolviendo uploadLimitExceeded (verificado 17/11 19:53 ART). Publicar con el flujo n8n 'Publicar clips pendientes (una vez)' (id HapNdKlZU0pmoYgX) cuando se libere el límite; no regenerar."
   },
   {
     "archivo": "tabla_del_10.mp4",
