@@ -507,7 +507,176 @@ def marcas3(L):
     while x < tp + g("puerta")["vd"] * 0.6: cad.append((x, v)); x += 0.6; v = min(0.6, v + 0.06)
     return dict(lat=tca, sil=[(tp + g("puerta")["vd"] * 0.7, tv)], susto=ts, campana=L.ini("final"), cadenas=cad, extra=extra)
 
-EPISODIOS = {"familiar": (FAMILIAR, cuadro, marcas1), "familiar2": (FAMILIAR2, cuadro2, marcas2), "familiar3": (FAMILIAR3, cuadro3, marcas3)}
+# ------------------------------------------------------------------ episodios 4-6 (motor por escenas)
+ORB = radial(520, (150, 255, 190), 2.4)
+
+def G(titulo, ep, proximo, filas):
+    """filas: (texto, pausa, escena, fx)."""
+    return dict(titulo=titulo, ep=ep, proximo=proximo, beats=[(str(i), f[0], f[1]) for i, f in enumerate(filas)], esc=[f[2] for f in filas], fx=[f[3] for f in filas])
+
+def campo(t, e, lt, dur):
+    alba = e.get("alba", False); im = (CIELO_ALBA if alba else CIELO).copy(); f = sm(lt / max(0.1, dur))
+    if not alba:
+        tam = int(520 * e.get("luna", 1.0)); im = luz(im, LUNA.resize((tam, tam)), 760, 430); r = 43 * e.get("luna", 1.0)
+        ImageDraw.Draw(im).ellipse([760 - r, 430 - r, 760 + r, 430 + r], fill=(214, 220, 234))
+    d = ImageDraw.Draw(im); c = (4, 5, 9) if not alba else (20, 22, 28); d.rectangle([0, 1300, W, H], fill=(6, 7, 11) if not alba else (38, 36, 40))
+    if e.get("arboles"):
+        for xa, ha in ((150, 520), (420, 380), (930, 600)):
+            d.rectangle([xa - 14, 1300 - ha * 0.5, xa + 14, 1300], fill=c)
+            for j in range(5): d.ellipse([xa - 130 + j * 34 - 40, 1300 - ha - 60 + (j % 2) * 70, xa - 130 + j * 34 + 150, 1300 - ha * 0.45 + (j % 3) * 30], fill=c)
+    if e.get("rancho"):
+        d.rectangle([150, 1120, 470, 1300], fill=c); d.polygon([(120, 1130), (310, 990), (500, 1130)], fill=c)
+        if e.get("vent"): d.rectangle([340, 1180, 410, 1250], fill=(230, 150, 60)); im = luz(im, GLOW[1 + int(t * 6) % 2].resize((420, 420)), 375, 1215); d = ImageDraw.Draw(im)
+    if e.get("cruces"):
+        d.ellipse([460, 1230, 1180, 1420], fill=c)
+        for j, xc in enumerate((560, 660, 770, 880, 990)):
+            h = 110 + (j * 37) % 60; yb = 1262 - (j % 2) * 12
+            d.rectangle([xc - 7, yb - h, xc + 7, yb], fill=c); d.rectangle([xc - 34, yb - h * 0.72, xc + 34, yb - h * 0.72 + 13], fill=c)
+    if "fig" in e:                                      # figura agachada que se levanta
+        xf, h0, h1 = e["fig"]; h = lerp(h0, h1, sm((lt - dur * 0.35) / (dur * 0.5))); yb = 1290
+        d.ellipse([xf - 50, yb - h, xf + 50, yb + 10], fill=(0, 0, 0)); d.ellipse([xf - 30, yb - h - 46, xf + 30, yb - h + 14], fill=(0, 0, 0))
+        if h1 > 200:
+            for q in (-1, 1): d.polygon([(xf + q * 12, yb - h - 30), (xf + q * 34, yb - h - 92 * sm((h - h0) / max(1, h1 - h0))), (xf + q * 30, yb - h - 14)], fill=(0, 0, 0))
+    if "peon" in e:
+        x0, x1 = e["peon"]; anda = x0 != x1; gy0 = globals()["SUELO"]; globals()["SUELO"] = 1420
+        fx, fy = peon(d, lerp(x0, x1, lt / max(0.1, dur)), t, anda=anda); globals()["SUELO"] = gy0
+        im = luz(im, GLOW[1 + int(t * 9) % 2].resize((640, 640)), fx, fy); d = ImageDraw.Draw(im)
+    if "orb" in e:
+        x0, y0, x1, y1, k0, k1 = e["orb"]; k = lerp(k0, k1, f) * (0.8 + 0.2 * math.sin(t * 9)); xo = lerp(x0, x1, f) + 14 * math.sin(t * 1.3); yo = lerp(y0, y1, f) + 10 * math.sin(t * 2.1)
+        tam = max(20, int(520 * (0.3 + 0.7 * k))); o = Image.eval(ORB.resize((tam, tam)), lambda v: int(v * min(1, k * 1.3)))
+        im = luz(im, o, xo, yo); im = luz(im, Image.eval(o.resize((tam, max(8, tam // 4))), lambda v: int(v * 0.4)), xo, 1330); d = ImageDraw.Draw(im)
+        if k > 0.05: d.ellipse([xo - 9 * k - 4, yo - 9 * k - 4, xo + 9 * k + 4, yo + 9 * k + 4], fill=(235, 255, 240))
+    if "ojos" in e:
+        xo, yo, s0, s1 = e["ojos"]; im = ojos(im, xo, yo, lerp(s0, s1, f), sm(lt / 1.2) * (0 if (t % 2.3) < 0.09 else 1)); d = ImageDraw.Draw(im)
+    canaveral(d, t, -1, base=1760, alto=300, col=c); canaveral(d, t, 1, base=1760, alto=300, col=c)
+    return bruma(im, t, alba=alba, k=0.3) if e.get("bruma", True) else im
+
+def cueva(t, e, lt, dur):
+    z = lerp(e.get("c0", 0.4), e.get("c1", 0.4), sm(lt / max(0.1, dur))); im = CIELO.copy(); d = ImageDraw.Draw(im)
+    d.polygon([(0, 1500), (0, 1000), (200, 760 - 200 * z), (540, 560 - 420 * z), (860, 800 - 200 * z), (W, 960), (W, 1500)], fill=(5, 5, 7)); d.rectangle([0, 1480, W, H], fill=(4, 4, 6))
+    cx, cy, w, h = 540, 1480, 190 * z * 2.2, 330 * z * 2.2; fl = 1 + int(t * 9) % 2
+    d.pieslice([cx - w, cy - h * 2, cx + w, cy], 180, 360, fill=(250, 130, 40)); d.rectangle([cx - w, cy - h, cx + w, cy], fill=(250, 130, 40))
+    for j in range(4):                                  # sombras que bailan adentro
+        xs = cx + (j - 1.5) * w * 0.42 + 14 * math.sin(t * 3 + j); hs = h * (0.9 + 0.25 * math.sin(t * 4.2 + j * 2))
+        d.polygon([(xs - 18 * z, cy), (xs + 18 * z, cy), (xs + 10 * z + 20 * z * math.sin(t * 5 + j), cy - hs)], fill=(40, 12, 4))
+    im = luz(im, GLOW[fl].resize((int(900 * z + 300),) * 2), cx, cy - h * 0.6); d = ImageDraw.Draw(im)
+    if "peon" in e:
+        gy0 = globals()["SUELO"]; globals()["SUELO"] = 1620; peon(d, lerp(e["peon"][0], e["peon"][1], lt / max(0.1, dur)), t, anda=e["peon"][0] != e["peon"][1]); globals()["SUELO"] = gy0
+    canaveral(d, t, -1, base=1800, alto=260); canaveral(d, t, 1, base=1800, alto=260); return im
+
+def cuadroG(L, t):
+    ep = L.ep; b, lt = L.en(t); i = L.b.index(b); e = ep["esc"][i]; dur = b["fin"] - b["ini"]; tipo = e["t"]
+    if tipo == "susto": return post(susto(t, lt), L, t)
+    if tipo == "texto":
+        im = Image.new("RGB", (W, H), (0, 0, 0)); d = ImageDraw.Draw(im); a = sm(lt / 0.5) * (0.82 + 0.18 * math.sin(t * 31))
+        d.text((W / 2, 820), e["l1"], font=F(130), fill=(int(190 * a), 0, 0), anchor="mm"); d.text((W / 2, 1000), e["l2"], font=F(150), fill=(int(210 * a), 0, 0), anchor="mm")
+        im = ojos(im, W / 2, 1330, 0.5, sm((lt - 1.2) / 1.5) * (0 if (t % 2.7) < 0.12 else 1))
+    elif tipo == "campo": im = campo(t, e, lt, dur)
+    elif tipo == "cueva": im = cueva(t, e, lt, dur)
+    elif tipo == "sendero":
+        im = sendero(t, alba=e.get("alba", False)); d = ImageDraw.Draw(im)
+        if "peon" in e:
+            x0, x1 = e["peon"]; fx, fy = peon(d, lerp(x0, x1, lt / max(0.1, dur)), t, anda=x0 != x1); im = luz(im, GLOW[1 + int(t * 9) % 2], fx, fy)
+        if "orb" in e:
+            x0, y0, x1, y1, k0, k1 = e["orb"]; f = sm(lt / max(0.1, dur)); k = lerp(k0, k1, f) * (0.8 + 0.2 * math.sin(t * 9)); tam = max(20, int(520 * (0.3 + 0.7 * k)))
+            im = luz(im, Image.eval(ORB.resize((tam, tam)), lambda v: int(v * min(1, k * 1.3))), lerp(x0, x1, f), lerp(y0, y1, f))
+        if "ojos" in e:
+            xo, yo, s0, s1 = e["ojos"]; im = ojos(im, xo, yo, lerp(s0, s1, sm(lt / dur)), sm(lt / 1.2))
+        im = bruma(im, t, alba=e.get("alba", False))
+    elif tipo == "vano":
+        im = vano(e.get("ab", 1.0)); d = ImageDraw.Draw(im)
+        if e.get("sombras"):
+            for j in range(3):
+                xs = 420 + j * 120 + 16 * math.sin(t * 3 + j); hs = 520 + 130 * math.sin(t * 4.2 + j * 2)
+                d.polygon([(xs - 24, 1500), (xs + 24, 1500), (xs + 30 * math.sin(t * 5 + j), 1500 - hs)], fill=(18, 4, 3))
+        if e.get("fig"):
+            gy = 1700; d.polygon([(420, gy), (660, gy), (630, gy - 520), (450, gy - 520)], fill=(0, 0, 0)); d.ellipse([490, gy - 640, 590, gy - 540], fill=(0, 0, 0)); d.ellipse([440, gy - 600, 640, gy - 566], fill=(0, 0, 0))
+        if "ojos" in e:
+            xo, yo, s0, s1 = e["ojos"]; a = sm((lt - b["vd"] * 0.45) / 1.6); im = ojos(im, xo, yo, lerp(s0, s1, a), a * 0.55)
+    else:                                               # negro
+        im = Image.new("RGB", (W, H), (2, 2, 4))
+        if "ojos" in e: xo, yo, s0, s1 = e["ojos"]; im = ojos(im, xo, yo, lerp(s0, s1, sm(lt / dur)), sm((lt - b["vd"] * 0.6) / 1.0) * 0.6)
+    d = ImageDraw.Draw(im)
+    if tipo != "texto": cabecera(d, ep)
+    if "card" in e and lt > b["vd"] + 0.4:
+        a = sm((lt - b["vd"] - 0.4) / 0.9); l1, l2, l3 = e["card"]
+        d.text((W / 2, 660), l1, font=F(120 if len(l1) < 8 else 84), fill=(int(200 * a), int(10 * a), int(10 * a)), anchor="mm", stroke_width=5, stroke_fill=(0, 0, 0))
+        d.text((W / 2, 800), l2, font=F(50), fill=(int(220 * a),) * 3, anchor="mm", stroke_width=4, stroke_fill=(0, 0, 0))
+        d.text((W / 2, 890), l3, font=F(42, False), fill=(int(200 * a),) * 3, anchor="mm", stroke_width=4, stroke_fill=(0, 0, 0))
+    subtitulo(d, b, lt)
+    return post(im, L, t)
+
+def fx_aullido(vol=0.5):
+    m = int(2.6 * SR); tt = np.arange(m) / SR; f = 300 + 230 * np.sin(np.pi * np.clip(tt / 2.6, 0, 1)) ** 0.7 + 6 * np.sin(2 * np.pi * 5.5 * tt)
+    ph = 2 * np.pi * np.cumsum(f) / SR; x = np.sin(ph) + 0.4 * np.sin(2 * ph) + 0.2 * np.sin(3 * ph)
+    return x * np.sin(np.pi * tt / 2.6) ** 0.8 * vol * 0.4
+def fx_musica(vol=0.2):
+    out = []
+    for f0, du in ((293.7, 0.7), (349.2, 0.7), (277.2, 0.9), (415.3, 0.5), (392.0, 0.5), (293.7, 1.3)):
+        m = int(du * SR); tt = np.arange(m) / SR; ph = 2 * np.pi * f0 * tt + 0.25 * np.sin(2 * np.pi * 6 * tt)
+        out.append(pasa_bajos(2 * ((ph / (2 * np.pi)) % 1) - 1, 9) * np.minimum(1, tt / 0.06) * np.exp(-tt * 0.8))
+    return np.concatenate(out) * vol
+def fx_tono(vol=0.1):
+    m = int(3.2 * SR); tt = np.arange(m) / SR
+    return (np.sin(2 * np.pi * 1244 * tt) + np.sin(2 * np.pi * 1251 * tt) + 0.5 * np.sin(2 * np.pi * 1866 * tt)) * np.sin(np.pi * tt / 3.2) ** 2 * vol
+
+def marcasG(L):
+    ep = L.ep; M = dict(lat=None, sil=[], susto=None, campana=None, cadenas=[], extra=[])
+    for i, b in enumerate(L.b):
+        fx = ep["fx"][i]; fin = b["ini"] + b["vd"]
+        if ep["esc"][i]["t"] == "susto": M["susto"] = b["ini"]; M["campana"] = b["fin"]
+        if fx.get("lat") and M["lat"] is None: M["lat"] = b["ini"]
+        if fx.get("sil"): M["sil"].append((fin - 0.2, b["fin"]))
+        for kind in fx.get("sfx", []):
+            if kind == "cadena": M["cadenas"] += [(fin + 0.2 + j * 0.6, 0.35) for j in range(2)]
+            elif kind == "golpe": M["extra"] += [(fin + 0.15 + j * 0.45, golpe()) for j in range(3)]
+            elif kind == "aullido": M["extra"].append((fin + 0.1, fx_aullido()))
+            elif kind == "aullido_lejos": M["extra"].append((b["ini"] + b["vd"] * 0.5, fx_aullido(0.22)))
+            elif kind == "musica": M["extra"].append((b["ini"] + 0.3, fx_musica()))
+            elif kind == "tono": M["extra"].append((b["ini"] + 0.2, fx_tono()))
+        if "sus" in fx: tx, rate, vol = fx["sus"]; M["extra"].append((fin + 0.3, susurro(tx, f"g{ep['ep']}_{i}", rate, vol)))
+    if M["lat"] is None: M["lat"] = M["susto"] - 8
+    return M
+
+LOBIZON = G("El Lobizón", 4, "La Salamanca", [
+ ("Si un viernes de luna llena te golpean la puerta... no abras.", 0.7, dict(t="texto", l1="NO ABRAS", l2="LA PUERTA"), dict(sfx=["golpe"])),
+ ("En el campo dicen que el séptimo hijo varón nace marcado.", 0.6, dict(t="campo", rancho=True, luna=1.5), dict(sfx=["aullido_lejos"])),
+ ("Los Ferreyra tuvieron siete. Al último lo llamaron Benito. Era el más callado.", 0.6, dict(t="campo", rancho=True, vent=True, luna=1.5), {}),
+ ("Cada luna llena, Benito salía solo. Decía que iba a caminar. Siempre para el lado del cementerio.", 0.7, dict(t="campo", cruces=True, luna=1.5, fig=(770, 70, 70)), {}),
+ ("Una noche, su hermano mayor lo siguió. Con un farol... y un cuchillo.", 0.6, dict(t="sendero", peon=(250, 520)), dict(lat=True)),
+ ("Lo encontró entre las tumbas. De rodillas. De espaldas.", 2.0, dict(t="campo", cruces=True, luna=1.5, fig=(770, 70, 70), peon=(210, 210)), dict(sil=True, sfx=["aullido"])),
+ ("Lo llamó por su nombre. Benito se dio vuelta. Y ya no era Benito.", 1.2, dict(t="campo", cruces=True, luna=1.5, fig=(770, 70, 330), peon=(210, 210), ojos=(770, 950, 0.1, 0.2)), dict(sil=True)),
+ ("", 1.7, dict(t="susto"), {}),
+ ("A la mañana, Benito desayunó con la familia. Como siempre. En la mesa... sobraba un lugar.", 1.0, dict(t="campo", rancho=True, vent=True, alba=True), {}),
+ ("Dicen que todavía vive en el pueblo. Y que saluda a todos.", 3.0, dict(t="campo", cruces=True, luna=1.5, ojos=(770, 1180, 0.14, 0.18), card=("EL LOBIZÓN", "Episodio 4", "Próxima historia: La Salamanca")), dict(sfx=["aullido_lejos"])),
+])
+SALAMANCA = G("La Salamanca", 5, "La Luz Mala", [
+ ("Hay una cueva donde te enseñan cualquier cosa. El precio... lo ponés vos.", 0.7, dict(t="texto", l1="¿QUÉ DARÍAS", l2="A CAMBIO?"), {}),
+ ("Santiago del Estero. Monte adentro. Una cueva que no figura en ningún mapa.", 0.6, dict(t="campo", arboles=True, luna=0.8), {}),
+ ("De noche, desde adentro, se escucha música. Guitarras. Violines. Risas.", 0.8, dict(t="cueva", c0=0.28, c1=0.36), dict(sfx=["musica"])),
+ ("Anselmo era el peor guitarrero del pago. Y estaba cansado de que se rieran.", 0.6, dict(t="sendero", peon=(250, 500)), {}),
+ ("Encontró la entrada un martes. Adentro había que pasar tres pruebas. Sin mirar atrás.", 0.7, dict(t="cueva", c0=0.4, c1=0.85, peon=(380, 470)), dict(sfx=["musica"], lat=True)),
+ ("Pasó la primera. Pasó la segunda. En la tercera... alguien le tocó el hombro.", 2.0, dict(t="vano", ab=1.0, sombras=True, fig=True), dict(sil=True)),
+ ("No se dio vuelta. Y una voz le dijo: bien. Ahora, tocá.", 1.2, dict(t="vano", ab=1.0, fig=True, ojos=(540, 420, 1.2, 1.7)), dict(sus=("Tocá.", 0.5, 1.5))),
+ ("Volvió al pueblo tocando como nadie. La gente lloraba al escucharlo.", 0.7, dict(t="campo", rancho=True, vent=True, luna=0.8), dict(sfx=["musica"])),
+ ("Pero desde esa noche, Anselmo no tiene sombra. Y cuando toca solo... alguien más aplaude.", 1.8, dict(t="negro", ojos=(540, 900, 0.3, 0.9)), dict(sil=True)),
+ ("", 1.7, dict(t="susto"), {}),
+ ("La cueva sigue ahí. Y siempre hay lugar para uno más.", 3.0, dict(t="cueva", c0=0.5, c1=0.62, card=("LA SALAMANCA", "Episodio 5", "Próxima historia: La Luz Mala")), dict(sfx=["musica"])),
+])
+LUZMALA = G("La Luz Mala", 6, "Temporada 2", [
+ ("Si en el campo ves una luz que flota... no la sigas.", 0.7, dict(t="texto", l1="NO LA", l2="SIGAS"), dict(sfx=["tono"])),
+ ("Pampa abierta. Ni un árbol. Ni un rancho. Solo el camino.", 0.6, dict(t="campo", luna=0.7), {}),
+ ("Los viejos dicen que es un alma en pena. Que cuida algo enterrado.", 0.8, dict(t="campo", luna=0.7, orb=(820, 1150, 760, 1120, 0.12, 0.2)), dict(sfx=["tono"])),
+ ("Un arriero la vio una noche. Chiquita. Lejos. Como un farol olvidado.", 0.6, dict(t="sendero", peon=(250, 430), orb=(560, 1330, 570, 1320, 0.1, 0.14)), {}),
+ ("Caminó hacia ella. La luz retrocedió. Siempre a la misma distancia.", 0.9, dict(t="campo", luna=0.7, peon=(200, 420), orb=(700, 1120, 900, 1080, 0.3, 0.22)), dict(sfx=["tono"], lat=True)),
+ ("Cuando quiso volver... el camino ya no estaba.", 2.0, dict(t="campo", luna=0.7, peon=(430, 430), orb=(900, 1080, 880, 1060, 0.22, 0.5), bruma=True), dict(sil=True)),
+ ("La luz se apagó. Y en la oscuridad sintió una mano fría... que le agarraba la suya.", 1.4, dict(t="negro"), dict(sil=True, sus=("Vení.", 0.5, 1.5))),
+ ("", 1.7, dict(t="susto"), {}),
+ ("Lo encontraron al amanecer. Vivo. Escarbando la tierra con las uñas. Nunca dijo qué buscaba.", 1.0, dict(t="campo", alba=True, fig=(600, 80, 80)), {}),
+ ("Argentina está llena de luces así. Si ves una... ya sabés.", 3.2, dict(t="campo", luna=0.7, orb=(540, 1100, 540, 1040, 0.3, 0.75), card=("FIN", "Temporada 1", "Argentina inexplicable")), dict(sfx=["tono"])),
+])
+
+EPISODIOS = {"familiar": (FAMILIAR, cuadro, marcas1), "familiar2": (FAMILIAR2, cuadro2, marcas2), "familiar3": (FAMILIAR3, cuadro3, marcas3), "lobizon": (LOBIZON, cuadroG, marcasG), "salamanca": (SALAMANCA, cuadroG, marcasG), "luzmala": (LUZMALA, cuadroG, marcasG)}
 if __name__ == "__main__":
     cual, out = sys.argv[1], sys.argv[2]; ep, cq, mk = EPISODIOS[cual]; L = Linea(ep, cual); fn = lambda t: cq(L, t)
     if len(sys.argv) > 3:
