@@ -19,3 +19,10 @@ Videos para el canal de YouTube (Shorts infantiles), publicados automáticamente
 - `episodios.py linterna|globo|ruido salida.mp4 [preview]`: serie de aventuras 3D con narrador; cada episodio es una lista de escenas en `EPISODIOS`. `MASC_DIR=mascotas3d python3 cuentos.py pelota ...` para la pelota en 3D.
 
 - `memes.py sueno|parcial|plata salida.mp4 [preview]`: memes originales (no infantiles) con las mascotas 3D. En la cola van con `para_ninos: false`, `categoria: "23"` y estado `espera_config` hasta que el flujo de n8n soporte esos campos.
+
+## Videos no infantiles y clips con IA (17/11/2026)
+- El flujo de publicación ya lee `para_ninos` (false = no es contenido para niños) y `categoria` (por defecto 27) de cada item de `cola.json`.
+- Flujo n8n nuevo "Generar clips con Higgsfield" (id `3T0wzfDggpvmtOXx`): cada 10 min toma UN item con estado `generar` y campo `prompt`, pide el clip a la API de Higgsfield, espera y lo guarda en Google Drive (raíz) como `CLIP_IA_<archivo>`.
+  Campos opcionales: `modelo` (por defecto `alibaba/wan-3.0/text-to-video`), `duracion` (5), `resolucion` (`480p`). Formato 9:16, sin audio.
+  Cada archivo se pide una sola vez (se anota antes de pedir, para no cobrar doble). Después se edita (texto, sonido) y pasa a `pendiente`.
+- Credencial n8n "Higgsfield API (pegar clave)": cabecera `Authorization` con valor `Key <clave>`; la clave la pega Geremias.
