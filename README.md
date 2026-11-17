@@ -28,3 +28,4 @@ Videos para el canal de YouTube (Shorts infantiles), publicados automáticamente
 - Credencial n8n "Higgsfield API (pegar clave)": cabecera `Authorization` con valor `Key <clave>`; la clave la pega Geremias.
 - Desde el 17/11 el flujo "Generar clips con Higgsfield" también **publica en YouTube** el clip generado (título, descripción, tags, `categoria` y `para_ninos` del item), además de guardarlo en Drive. Un item `generar` = un video generado y publicado sin revisión. Estado `generado` = ya procesado, n8n lo ignora.
 - Campo `publicar: false` en un item `generar`: el flujo de Higgsfield solo genera y guarda en Drive (`CLIP_IA_<archivo>`), sin subir a YouTube. Para subir después lo ya generado: flujo n8n "Publicar clips pendientes (una vez)" (id `HapNdKlZU0pmoYgX`).
+- `terror/serie.py familiar salida.mp4 [preview]`: serie de terror narrada "Argentina inexplicable" (voz Piper grave con eco, subtítulos, latidos, cadenas y susto). Episodios en `EPISODIOS`.
