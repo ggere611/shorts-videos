@@ -26,3 +26,4 @@ Videos para el canal de YouTube (Shorts infantiles), publicados automáticamente
   Campos opcionales: `modelo` (por defecto `alibaba/wan-3.0/text-to-video`), `duracion` (5), `resolucion` (`480p`). Formato 9:16, sin audio.
   Cada archivo se pide una sola vez (se anota antes de pedir, para no cobrar doble). Después se edita (texto, sonido) y pasa a `pendiente`.
 - Credencial n8n "Higgsfield API (pegar clave)": cabecera `Authorization` con valor `Key <clave>`; la clave la pega Geremias.
+- Desde el 17/11 el flujo "Generar clips con Higgsfield" también **publica en YouTube** el clip generado (título, descripción, tags, `categoria` y `para_ninos` del item), además de guardarlo en Drive. Un item `generar` = un video generado y publicado sin revisión. Estado `generado` = ya procesado, n8n lo ignora.

@@ -215,13 +215,14 @@
     "titulo": "Yo: \"hoy me duermo temprano\" 😴📱 #shorts #humor",
     "descripcion": "Todas las noches lo mismo 😭 ¿A qué hora te dormiste ayer?\n\n#humor #memes #shorts #argentina #meme #risa #fyp #viral #humorargentino #relatable",
     "tags": "humor,memes,dormir tarde,celular,relatable,shorts",
-    "estado": "generar",
+    "estado": "generado",
     "para_ninos": false,
     "categoria": "23",
     "prompt": "Realistic vertical video, young man lying in bed in a dark bedroom at night, face lit only by the glow of his phone screen, eyes wide open, scrolling with his thumb, slight tired smile, handheld camera, cinematic, shallow depth of field",
     "duracion": 5,
     "resolucion": "480p",
     "texto1": "Yo: \"hoy me duermo temprano\"",
-    "texto2": "Yo a las 3:47 AM:"
+    "texto2": "Yo a las 3:47 AM:",
+    "nota": "Clip de prueba en Drive: CLIP_IA_meme_ia_sueno.mp4 (no publicado)"
   }
 ]
